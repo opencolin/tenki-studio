@@ -5,6 +5,10 @@ plain language, edit the resulting crew on a canvas, run it, and read the trace 
 where **every run executes inside a disposable [Tenki.cloud](https://tenki.cloud)
 sandbox** instead of on shared infrastructure.
 
+**Live: [tenki-studio--irtbn5.us.sb.tenki.sh](https://tenki-studio--irtbn5.us.sb.tenki.sh)**
+— served from a Tenki sandbox, which builds this repository from source. Open
+[`/studio`](https://tenki-studio--irtbn5.us.sb.tenki.sh/studio/) and press **Run**.
+
 > **Status: front-end prototype.** Every screen here is real and interactive, but the
 > run engine is *simulated* — it replays a scripted trace on timers so the Output and
 > Traces views behave exactly as they will against a live run. The orchestrator and the
