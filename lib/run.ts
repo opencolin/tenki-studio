@@ -17,7 +17,9 @@ export type EventType =
   | "tool_usage_finished"
   | "task_completed"
   | "artifact"
-  | "run_completed";
+  | "run_completed"
+  | "run_failed"
+  | "heartbeat";
 
 export interface RunEvent {
   seq: number;

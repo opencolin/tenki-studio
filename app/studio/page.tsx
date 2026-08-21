@@ -13,6 +13,7 @@ import type { Graph } from "@/lib/fbp";
 import { setPosition, setProps } from "@fbp/spec";
 import { buildScript, fmt, type RunState } from "@/lib/run";
 import { buildArtifacts, releaseArtifacts, type Artifact } from "@/lib/artifacts";
+import { liveRunFromLocation, subscribeToRun } from "@/lib/stream";
 
 type View = "canvas" | "output" | "traces";
 
@@ -32,6 +33,8 @@ export default function StudioPage() {
   const [showWarnings, setShowWarnings] = useState(false);
   const [tool, setTool] = useState("select");
   const [inspecting, setInspecting] = useState<string | null>(null);
+  const [live, setLive] = useState<{ base: string; runId: string } | null>(null);
+  const [beat, setBeat] = useState<number | null>(null);
   const api = useRef<CanvasApi | null>(null);
   const timers = useRef<number[]>([]);
   const artifactsRef = useRef<Artifact[]>([]);
@@ -44,17 +47,39 @@ export default function StudioPage() {
     timers.current = [];
   };
   useEffect(() => clearTimers, []);
+
+  // A live run replaces the simulator entirely: same views, real events.
+  useEffect(() => {
+    const target = liveRunFromLocation();
+    if (!target) return;
+    setLive(target);
+    setView("output");
+    setRun({ status: "provisioning", startedAt: Date.now(), elapsedMs: 0, events: [], inputs: {} });
+    const handle = subscribeToRun(target.base, target.runId, {
+      onEvent: (event) =>
+        setRun((r) =>
+          r.events.some((e) => e.seq === event.seq)
+            ? r
+            : { ...r, events: [...r.events, event].sort((a, b) => a.seq - b.seq) },
+        ),
+      onStatus: (status) => setRun((r) => (r.status === status ? r : { ...r, status })),
+      onHeartbeat: () => setBeat(Date.now()),
+      onError: (message) => setToast({ title: "Stream lost", body: message }),
+    });
+    return handle.close;
+  }, []);
   useEffect(() => () => releaseArtifacts(artifactsRef.current), []);
 
   // Elapsed clock while a run is in flight.
   useEffect(() => {
     if (run.status !== "running" && run.status !== "provisioning") return;
+    if (live) return;
     const id = window.setInterval(
       () => setRun((r) => (r.startedAt ? { ...r, elapsedMs: Date.now() - r.startedAt } : r)),
       250,
     );
     return () => window.clearInterval(id);
-  }, [run.status]);
+  }, [run.status, live]);
 
   useEffect(() => {
     if (!toast) return;
@@ -154,7 +179,12 @@ export default function StudioPage() {
         <button className="btn gho" onClick={() => setModal("share")}>
           Share
         </button>
-        {busy ? (
+        {live ? (
+          <span className="badge running" title={`Streaming ${live.runId}`}>
+            <span className="dot" />
+            Live{beat ? "" : " · connecting"}
+          </span>
+        ) : busy ? (
           <button className="btn ink" onClick={stopRun}>
             <I.Stop size={11} />
             Stop
