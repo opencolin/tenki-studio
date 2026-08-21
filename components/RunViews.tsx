@@ -4,6 +4,8 @@ import { useState } from "react";
 import type { CrewView } from "@/lib/crew";
 import { agentById } from "@/lib/crew";
 import { fmt, type RunEvent, type RunState } from "@/lib/run";
+import type { Artifact } from "@/lib/artifacts";
+import { ArtifactList } from "./Artifacts";
 import * as I from "./Icons";
 
 const surface: React.CSSProperties = {
@@ -21,11 +23,18 @@ const surface: React.CSSProperties = {
 
 /* ------------------------------- Output ------------------------------- */
 
-export function OutputView({ spec, run }: { spec: CrewView; run: RunState }) {
+export function OutputView({
+  spec,
+  run,
+  artifacts,
+}: {
+  spec: CrewView;
+  run: RunState;
+  artifacts: Artifact[];
+}) {
   const seen = run.events;
   const done = new Set(seen.filter((e) => e.type === "task_completed").map((e) => e.taskId));
   const started = new Set(seen.filter((e) => e.type === "task_started").map((e) => e.taskId));
-  const artifact = seen.find((e) => e.type === "artifact");
   const [open, setOpen] = useState<string | null>(null);
 
   if (run.status === "idle") {
@@ -202,39 +211,7 @@ export function OutputView({ spec, run }: { spec: CrewView; run: RunState }) {
         })}
       </div>
 
-      {artifact && (
-        <>
-          <div className="eyebrow" style={{ marginTop: 18 }}>
-            Artifacts
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 4px" }}>
-            <span
-              style={{
-                width: 20,
-                height: 20,
-                borderRadius: 6,
-                background: "var(--accent-soft)",
-                color: "var(--accent-ink)",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flex: "none",
-              }}
-            >
-              <I.Image size={12} />
-            </span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="mono" style={{ fontSize: 12 }}>
-                {artifact.label}
-              </div>
-              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
-                {artifact.detail?.description}
-              </div>
-            </div>
-            <I.Download size={14} style={{ color: "var(--muted)" }} />
-          </div>
-        </>
-      )}
+      <ArtifactList artifacts={artifacts} />
     </div>
   );
 }

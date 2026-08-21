@@ -8,12 +8,33 @@ const ROWS = [
     name: "Dabl Anthropic",
     provider: "Anthropic",
     models: "claude-fable-5, claude-opus-5, claude-sonnet-5, claude-haiku-4-5",
+    env: "ANTHROPIC_API_KEY",
   },
-  { name: "Colin's OpenAI", provider: "OpenAI", models: "gpt-5.2-chat-latest, gpt-5.2-pro, gpt-4o, gpt-4o-mini" },
+  {
+    name: "Colin's OpenAI",
+    provider: "OpenAI",
+    models: "gpt-5.2-chat-latest, gpt-5.2-pro, gpt-4o, gpt-4o-mini",
+    env: "OPENAI_API_KEY",
+  },
   {
     name: "Gemini (shared)",
     provider: "Gemini",
     models: "gemini-3-pro-preview, gemini-2.5-pro, gemini-2.5-flash",
+    env: "GEMINI_API_KEY",
+  },
+  {
+    name: "Nebius Token Factory",
+    provider: "Nebius",
+    models: "deepseek-ai/DeepSeek-V3, Qwen/Qwen3-235B-A22B, meta-llama/Llama-3.3-70B-Instruct, +60 open models",
+    env: "NEBIUS_API_KEY",
+    base: "https://api.tokenfactory.nebius.com",
+  },
+  {
+    name: "AIsa",
+    provider: "AIsa",
+    models: "110+ models routed through one key — openai/*, anthropic/*, gemini/*",
+    env: "AISA_API_KEY",
+    base: "https://aisa.one",
   },
 ];
 
@@ -51,6 +72,7 @@ export default function ConnectionsPage() {
                 <th style={{ width: "22%" }}>Name</th>
                 <th style={{ width: "14%" }}>Provider</th>
                 <th>Available Models</th>
+                <th style={{ width: "18%" }}>Credential</th>
                 <th style={{ textAlign: "right", width: "8%" }}>Actions</th>
               </tr>
             </thead>
@@ -66,6 +88,16 @@ export default function ConnectionsPage() {
                   <td className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
                     {r.models}
                   </td>
+                  <td>
+                    <span className="mono" style={{ fontSize: 11 }}>
+                      {r.env}
+                    </span>
+                    {r.base && (
+                      <div className="mono" style={{ fontSize: 10.5, color: "var(--muted)", marginTop: 3 }}>
+                        {r.base}
+                      </div>
+                    )}
+                  </td>
                   <td style={{ textAlign: "right", color: "var(--muted)" }}>
                     <I.Dots size={16} />
                   </td>
@@ -78,7 +110,9 @@ export default function ConnectionsPage() {
 
       <p style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 14, lineHeight: 1.6, maxWidth: 640 }}>
         Keys are encrypted at rest and injected into the run sandbox as environment variables — they are never
-        sent to the browser. Models from every connection populate the agent and manager pickers on the canvas.
+        sent to the browser, committed to the repo, or pasted into Studio Chat. Models from every connection
+        populate the agent and manager pickers on the canvas. Nebius Token Factory and AIsa are both
+        OpenAI-compatible, so they need a base URL alongside the key.
       </p>
     </PageShell>
   );

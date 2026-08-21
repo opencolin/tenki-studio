@@ -7,6 +7,8 @@ import { TOOLS } from "@/lib/crew";
 
 const CONNECTIONS = [
   { app: "Serper", type: "Built-in", status: "Connected", by: "Tenki Studio" },
+  { app: "Tavily", type: "Built-in", status: "Available", by: "Tenki Studio" },
+  { app: "AIsa", type: "Built-in", status: "Available", by: "Tenki Studio" },
   { app: "Google Calendar", type: "Agent App", status: "Connected", by: "Google Calendar" },
   { app: "Databricks", type: "MCP", status: "Available", by: "Databricks" },
   { app: "Snowflake", type: "MCP", status: "Available", by: "Snowflake" },
@@ -113,7 +115,12 @@ export default function ToolsPage() {
                 <div className="sora" style={{ fontSize: 13, fontWeight: 600 }}>
                   {t.label}
                 </div>
-                <div className="mono" style={{ fontSize: 10.5, color: "var(--muted)", marginTop: 4 }}>
+                {t.note && (
+                  <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 5, lineHeight: 1.45 }}>
+                    {t.note}
+                  </div>
+                )}
+                <div className="mono" style={{ fontSize: 10.5, color: "var(--muted)", marginTop: 6 }}>
                   {id}
                   {t.env ? ` · needs ${t.env}` : " · no credentials"}
                 </div>

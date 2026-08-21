@@ -53,8 +53,18 @@ export interface CrewView {
   tasks: TaskView[];
 }
 
-export const TOOLS: Record<string, { label: string; env?: string }> = {
+export const TOOLS: Record<string, { label: string; env?: string; note?: string }> = {
   serper_search: { label: "Search the internet with Serper", env: "SERPER_API_KEY" },
+  tavily_search: {
+    label: "Search the web with Tavily",
+    env: "TAVILY_API_KEY",
+    note: "LLM-oriented search returning ranked results, optional answers and raw page content.",
+  },
+  aisa_resource: {
+    label: "Call a resource on AIsa",
+    env: "AISA_API_KEY",
+    note: "One credential onto AIsa's aggregated APIs and skills; billed per call.",
+  },
   scrape_website: { label: "Scrape a website" },
   http_request: { label: "HTTP request" },
   run_python: { label: "Run Python in the sandbox" },
@@ -68,6 +78,11 @@ export const MODELS = [
   "gpt-4o",
   "gpt-4o-mini",
   "gemini-3-pro-preview",
+  "nebius/deepseek-ai/DeepSeek-V3",
+  "nebius/Qwen/Qwen3-235B-A22B",
+  "nebius/meta-llama/Llama-3.3-70B-Instruct",
+  "aisa/openai/gpt-4o",
+  "aisa/anthropic/claude-sonnet-5",
 ];
 
 const pos = (node: Node) => ({ x: node.meta?.x ?? 0, y: node.meta?.y ?? 0 });

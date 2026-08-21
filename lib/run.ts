@@ -172,8 +172,8 @@ export function buildScript(spec: CrewView, inputs: Record<string, string>): Run
   push(
     {
       type: "artifact",
-      label: `artifacts/poster_${client.toLowerCase().replace(/[^a-z0-9]+/g, "_")}.png`,
-      detail: { description: "Written inside the sandbox by the art-direction task · 1.4 MB" },
+      label: "Collecting artifacts from the sandbox",
+      detail: { description: "Files written under /workspace/artifacts are copied out before teardown." },
     },
     300,
   );

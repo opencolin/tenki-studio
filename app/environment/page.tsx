@@ -12,12 +12,18 @@ const GROUPS = [
     scope: "LLM connection",
     vars: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
   },
+  {
+    label: "Nebius Token Factory, AIsa",
+    scope: "LLM connection",
+    vars: ["NEBIUS_API_KEY", "AISA_API_KEY"],
+  },
   { label: "SerperDevTool", scope: "Organization", vars: ["SERPER_API_KEY"] },
+  { label: "Tavily", scope: "Organization", vars: ["TAVILY_API_KEY"] },
 ];
 
 export default function EnvironmentPage() {
   const [scope, setScope] = useState<(typeof SCOPES)[number]>("All");
-  const counts: Record<string, number> = { All: 3, Project: 0, Organization: 1, "LLM connection": 2, Missing: 0 };
+  const counts: Record<string, number> = { All: 6, Project: 0, Organization: 2, "LLM connection": 4, Missing: 0 };
   const groups = GROUPS.filter((g) => scope === "All" || g.scope === scope);
 
   return (

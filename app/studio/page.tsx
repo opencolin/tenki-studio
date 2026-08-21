@@ -11,6 +11,7 @@ import { defaultGraph, toCrew, validate, type Process } from "@/lib/crew";
 import type { Graph } from "@/lib/fbp";
 import { setPosition, setProps } from "@fbp/spec";
 import { buildScript, fmt, type RunState } from "@/lib/run";
+import { buildArtifacts, releaseArtifacts, type Artifact } from "@/lib/artifacts";
 
 type View = "canvas" | "output" | "traces";
 
@@ -25,12 +26,15 @@ export default function StudioPage() {
   const [run, setRun] = useState<RunState>(IDLE);
   const [modal, setModal] = useState<null | "env" | "share" | "inputs">(null);
   const [toast, setToast] = useState<{ title: string; body: string } | null>(null);
+  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [zoom, setZoom] = useState(1);
   const [showWarnings, setShowWarnings] = useState(false);
   const [tool, setTool] = useState("select");
   const api = useRef<CanvasApi | null>(null);
   const timers = useRef<number[]>([]);
+  const artifactsRef = useRef<Artifact[]>([]);
 
+  artifactsRef.current = artifacts;
   const warnings = validate(crew);
 
   const clearTimers = () => {
@@ -38,6 +42,7 @@ export default function StudioPage() {
     timers.current = [];
   };
   useEffect(() => clearTimers, []);
+  useEffect(() => () => releaseArtifacts(artifactsRef.current), []);
 
   // Elapsed clock while a run is in flight.
   useEffect(() => {
@@ -58,6 +63,8 @@ export default function StudioPage() {
   const startRun = useCallback(
     (inputs: Record<string, string>) => {
       clearTimers();
+      releaseArtifacts(artifactsRef.current);
+      setArtifacts([]);
       const script = buildScript(crew, inputs);
       setRun({ status: "provisioning", startedAt: Date.now(), elapsedMs: 0, events: [], inputs });
       setView("output");
@@ -74,6 +81,15 @@ export default function StudioPage() {
           }));
           if (ev.type === "run_completed") {
             setToast({ title: "Run completed", body: "Sandbox destroyed · 21.4 sandbox-seconds billed." });
+            const outputOf = (id: string) =>
+              script.find((e) => e.type === "task_completed" && e.taskId === id)?.detail?.output;
+            buildArtifacts(inputs.client_name || "your client", {
+              brief: outputOf("client_discovery_and_briefing"),
+              design: outputOf("visual_design_specifications"),
+              prompt: outputOf("final_advertisement_prompt"),
+            })
+              .then(setArtifacts)
+              .catch(() => setArtifacts([]));
           }
         }, ev.at);
         timers.current.push(t);
@@ -315,7 +331,7 @@ export default function StudioPage() {
         </>
       )}
 
-      {view === "output" && <OutputView spec={crew} run={run} />}
+      {view === "output" && <OutputView spec={crew} run={run} artifacts={artifacts} />}
       {view === "traces" && <TracesView spec={crew} run={run} />}
 
       <ChatPanel

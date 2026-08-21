@@ -90,6 +90,43 @@ directly.
 > `@fbp/types` and `@fbp/spec` also declare *different, incompatible* `Graph`
 > types — this project depends only on `@fbp/spec`.
 
+### Artifacts
+
+A finished run produces real files, not placeholder rows. The poster is rendered
+in the browser from the art-direction task's design specification — flat colour
+blocks, geometric cloud forms, a condensed headline locked to a rule, the accent
+used exactly once — and the task outputs are emitted as text files beside it.
+Every row shows its true byte count, opens in a viewer (image preview or text),
+and downloads. If rendering fails, the artifact is omitted rather than faked.
+
+When the orchestrator lands, `buildArtifacts` is replaced by the files the crew
+actually wrote under `/workspace/artifacts`, served from object storage — the
+viewer and download path stay as they are.
+
+### Tools and model providers
+
+Built-in tools live in `TOOLS` ([lib/crew.ts](lib/crew.ts)); each declares the
+environment variable it needs, which flows into the Environment Variables screen
+and blocks a run when unset:
+
+| Tool | Credential |
+|---|---|
+| Serper search | `SERPER_API_KEY` |
+| [Tavily](https://tavily.com) search — LLM-oriented results, answers, raw page content | `TAVILY_API_KEY` |
+| [AIsa](https://aisa.one) resource call — one key onto aggregated APIs and skills | `AISA_API_KEY` |
+| Scrape, HTTP, run Python in the sandbox, read/write file | none |
+
+Model providers are configured under LLM Connections. Alongside Anthropic,
+OpenAI and Gemini, two OpenAI-compatible providers are wired in:
+
+- **Nebius Token Factory** — `https://api.tokenfactory.nebius.com`, `NEBIUS_API_KEY`,
+  60+ open models (DeepSeek, Qwen, Llama, Mistral).
+- **AIsa** — `AISA_API_KEY`, 110+ models routed through a single credential.
+
+**Never commit a key or paste one into Studio Chat.** Keys belong in your shell,
+a gitignored `.env.local`, or the org's environment-variable store; at run time
+the orchestrator injects them into the sandbox and masks them in traces.
+
 ### Design notes
 
 Two deliberate departures from the tool this is modelled on:
