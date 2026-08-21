@@ -12,13 +12,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "$ROOT"
 
-echo "==> Building the static site"
-npm run build
-
-echo "==> Packing ./out"
-TARBALL="$(mktemp -t tenki-studio-XXXX).tgz"
-tar czf "$TARBALL" -C out .
-
 if tenki sandbox get --session "$SESSION" >/dev/null 2>&1; then
   echo "==> Reusing sandbox $SESSION"
   tenki sandbox resume --session "$SESSION" >/dev/null 2>&1 || true
@@ -33,17 +26,21 @@ else
     --idle-timeout 0 >/dev/null
 fi
 
-echo "==> Uploading the site"
-tenki sandbox exec --session "$SESSION" -- bash -lc 'rm -rf /srv/site && mkdir -p /srv/site'
-tenki sandbox write --session "$SESSION" --path /root/site.tgz --file "$TARBALL"
-tenki sandbox exec --session "$SESSION" -- bash -lc 'tar xzf /root/site.tgz -C /srv/site'
+echo "==> Building inside the sandbox from this repo"
+tenki sandbox exec --session "$SESSION" --timeout 120s -c \
+  'cd ~ && rm -rf tenki-studio && git clone --depth 1 https://github.com/opencolin/tenki-studio.git >/tmp/clone.log 2>&1 && echo cloned'
+tenki sandbox exec --session "$SESSION" --timeout 60s -c \
+  'cd ~/tenki-studio && setsid sh -c "npm ci --no-audit --no-fund >/tmp/install.log 2>&1 && npm run build >/tmp/build.log 2>&1 && touch /tmp/BUILD_OK" >/dev/null 2>&1 < /dev/null & sleep 1; echo building'
+until tenki sandbox exec --session "$SESSION" --timeout 30s -c 'test -f /tmp/BUILD_OK && echo DONE' 2>/dev/null | grep -q DONE; do
+  sleep 10
+done
+echo "==> Built"
 
 echo "==> Starting the server on :$PORT"
-tenki sandbox exec --session "$SESSION" -- bash -lc \
-  "pkill -f 'serve@14' || true; setsid npx --yes serve@14 /srv/site -l $PORT --single >/tmp/serve.log 2>&1 < /dev/null & sleep 4; curl -sf -o /dev/null http://localhost:$PORT/ && echo serving"
+tenki sandbox exec --session "$SESSION" --timeout 60s -c \
+  "pkill -f serve.mjs || true; cd ~/tenki-studio && PORT=$PORT setsid node scripts/serve.mjs out >/tmp/serve.log 2>&1 < /dev/null & sleep 3; curl -sf -o /dev/null http://localhost:$PORT/ && echo serving"
 
 echo "==> Exposing the port"
 tenki sandbox expose --session "$SESSION" "$PORT" --slug "$SLUG"
 
-rm -f "$TARBALL"
 echo "==> Done"

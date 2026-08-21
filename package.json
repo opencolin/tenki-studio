@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "npx --yes serve@14 out -l ${PORT:-3000}",
+    "start": "node scripts/serve.mjs out",
     "lint": "next lint"
   },
   "dependencies": {
