@@ -9,6 +9,12 @@ sandbox** instead of on shared infrastructure.
 — served from a Tenki sandbox, which builds this repository from source. Open
 [`/studio`](https://tenki-studio--irtbn5.us.sb.tenki.sh/studio/) and press **Run**.
 
+> **Phase 0 is done:** [spike/FINDINGS.md](spike/FINDINGS.md) — a detached runner
+> streams events out of a sandbox reliably through every failure we induced
+> (ingest outage, killed runner, retried batches, gateway timeouts), and the
+> studio's Output and Traces views render a live run over SSE. No LLM keys
+> needed; the transport was what was under test.
+
 > **What to build next:** [PRD 002 — Make one run real](docs/PRD-002-make-one-run-real.md)
 > takes stock of what is real versus façade and decides the order of work: the sandbox
 > execution path first, with the node inspector alongside it; multi-framework support,
