@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+.DS_Store
+.env
+.env.local
+
+# Reference screenshots of another product's UI — kept locally, not published.
+screenshots/
+
+# Seeded design-canvas payload (2MB+ build artifact); the .dc.html sources are tracked.
+design/tenki-studio-design.html

@@ -1,0 +1,185 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+  <style>
+    body { margin:0; }
+    * { box-sizing:border-box; }
+    a { color:#0A7ABF; } a:hover { color:#075E94; }
+    .sora { font-family:Sora,system-ui,sans-serif; }
+    .mono { font-family:"JetBrains Mono",ui-monospace,monospace; }
+    .bar { position:absolute; z-index:10; display:flex; align-items:center; background:var(--surface); border:1px solid var(--line); border-radius:11px; box-shadow:0 1px 2px rgba(19,36,48,.06), 0 6px 20px rgba(19,36,48,.10); }
+    .div { width:1px; align-self:stretch; background:var(--line); margin:6px 0; }
+    .ico { width:32px; height:32px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; color:var(--muted); flex:none; }
+    .btn { height:30px; padding:0 12px; border-radius:8px; font-family:Sora,system-ui,sans-serif; font-size:12.5px; font-weight:600; display:inline-flex; align-items:center; gap:7px; color:var(--ink); white-space:nowrap; }
+    .btn.pri { background:var(--accent); color:#FFFFFF; }
+    .btn.ink { background:var(--ink); color:#FFFFFF; }
+    .seg { height:30px; padding:0 14px; border-radius:8px; font-family:Sora,system-ui,sans-serif; font-size:12.5px; font-weight:600; color:var(--muted); display:inline-flex; align-items:center; }
+    .seg.on { background:var(--surface2); color:var(--ink); }
+    .chip { display:inline-flex; align-items:center; gap:6px; height:22px; padding:0 9px; border-radius:999px; border:1px solid var(--line); background:var(--surface); font-size:11.5px; font-weight:500; color:var(--muted); }
+    .trow { display:flex; align-items:center; gap:8px; padding:7px 14px; font-size:12px; border-bottom:1px solid var(--surface2); }
+    .trow .off { margin-left:auto; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:10.5px; color:var(--muted); }
+    .pill { display:inline-flex; align-items:center; gap:4px; height:18px; padding:0 7px; border-radius:999px; background:var(--asoft); color:#075E94; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:10px; font-weight:600; }
+    .dlabel { display:flex; align-items:center; gap:7px; font-family:Sora,system-ui,sans-serif; font-size:12px; font-weight:600; margin:14px 0 6px; }
+    .dblock { border:1px solid var(--line); border-radius:8px; background:var(--surface2); padding:10px 12px; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:10.5px; line-height:1.55; color:var(--ink); overflow:hidden; }
+    .av { width:24px; height:24px; border-radius:99px; border:2px solid var(--surface); display:inline-flex; align-items:center; justify-content:center; font-family:Sora,system-ui,sans-serif; font-size:10px; font-weight:600; color:#FFFFFF; }
+  </style>
+</helmet>
+<div style="--page:#F5F8FA; --surface:#FFFFFF; --surface2:#EBF2F7; --ink:#14212B; --muted:#5A7184; --line:#DCE6ED; --accent:#0A7ABF; --asoft:#E1F0F9; --ok:#1E7F4F; --oksoft:#E2F2E9; --run:#DD7A10; width:1440px; height:900px; overflow:hidden; position:relative; background:var(--page); color:var(--ink); font-family:'Public Sans',system-ui,sans-serif; font-size:13.5px;">
+
+  <!-- Project pill (top-left) -->
+  <div class="bar" style="top:12px; left:12px; height:38px; gap:8px; padding:0 6px;">
+    <span style="width:24px; height:24px; border-radius:7px; background:var(--accent); display:inline-flex; align-items:center; justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.6 1.6A4 4 0 0 0 7 19h10.5z"/></svg></span>
+    <span style="font-size:12.5px; color:var(--muted);">Dabl Club</span>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M9 6l6 6-6 6"/></svg>
+    <span class="sora" style="font-size:12.5px; font-weight:600;">Mad Men AI Poster Generator</span>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M6 9l6 6 6-6"/></svg>
+    <span class="div"></span>
+    <span class="ico" style="width:30px; height:30px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9.5 4v16"/></svg></span>
+  </div>
+
+  <!-- View switcher -->
+  <div class="bar" style="top:12px; left:429px; height:38px; padding:4px;">
+    <span class="seg">Canvas</span><span class="seg">Output</span><span class="seg on">Traces</span>
+  </div>
+
+  <!-- Actions (top-right) -->
+  <div class="bar" style="top:12px; right:364px; height:38px; gap:8px; padding:0 6px;">
+    <span style="display:inline-flex; padding-left:4px;">
+      <span class="av" style="background:#0A7ABF;">CL</span>
+      <span class="av" style="background:#1E7F4F; margin-left:-8px;">PO</span>
+    </span>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M6 9l6 6 6-6"/></svg>
+    <span class="div"></span>
+    <span class="ico" style="width:30px; height:30px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></span>
+    <span class="btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>Deploy</span>
+    <span class="btn" style="border:1px solid var(--line);">Share</span>
+    <span class="btn ink"><svg width="11" height="11" viewBox="0 0 24 24" fill="#FFFFFF"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>Stop</span>
+  </div>
+
+  <!-- Trace surface: details LEFT, timeline RIGHT (mirrored) -->
+  <div style="position:absolute; top:60px; left:12px; right:364px; bottom:12px; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:0 1px 2px rgba(19,36,48,.05); overflow:hidden; display:flex;">
+
+    <!-- Event details (LEFT) -->
+    <div style="width:388px; flex:none; border-right:1px solid var(--line); display:flex; flex-direction:column; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:8px; padding:11px 16px; border-bottom:1px solid var(--line);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/></svg>
+        <span class="sora" style="font-size:13px; font-weight:600; flex:1;">Event details</span>
+        <span style="font-family:Sora,system-ui,sans-serif; font-size:11.5px; font-weight:600; color:var(--accent); border-bottom:2px solid var(--accent); padding-bottom:2px;">Details</span>
+        <span style="font-family:Sora,system-ui,sans-serif; font-size:11.5px; font-weight:600; color:var(--muted);">Raw Data</span>
+      </div>
+      <div style="flex:1; overflow:hidden; padding:14px 16px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4.5 4.5 0 0 0-6 6L3 18l3 3 5.7-5.7a4.5 4.5 0 0 0 6-6L14 13l-3-3 3.7-3.7z"/></svg>
+          <span class="mono" style="font-size:12.5px; font-weight:600;">search_the_internet_with_serper</span>
+        </div>
+        <div style="font-size:11px; color:var(--muted); margin-top:4px;">8/19/2026, 10:36:08 AM</div>
+        <div style="display:flex; gap:6px; margin-top:10px;">
+          <span class="chip" style="height:20px; font-size:10.5px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>Don Draper</span>
+          <span class="chip mono" style="height:20px; font-size:10px;">client_discovery_and_briefing</span>
+        </div>
+
+        <div class="dlabel"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></svg>Input
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto; color:var(--muted);"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></div>
+        <div class="dblock" style="background:var(--asoft); border-color:#C4E0F1;">{<br>&nbsp;&nbsp;"search_query": <span style="color:#075E94;">"Trends in cloud computing and weather data solutions 2026"</span><br>}</div>
+
+        <div class="dlabel"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 5-5.5"/></svg>Output
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto; color:var(--muted);"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></div>
+        <div class="dblock" style="color:var(--muted);">{'searchParameters': {'q': 'Trends in cloud computing and weather data solutions 2026', 'type': 'search', 'num': 10},<br>'organic': [<br>&nbsp;{'title': '24 Key Cloud Computing Trends to Watch in 2026', 'link': 'https://www.netsuite.com/…', 'snippet': 'The future of cloud computing includes AI-driven automation, edge computing…', 'position': 1},<br>&nbsp;{'title': 'Top Cloud Computing Trends — GreenNode', 'link': 'https://greennode.ai/blog/…', 'snippet': 'Explore the top cloud computing trends shaping 2026, from AI-driven automation to edge…', 'position': 2},<br>&nbsp;{'title': 'Top 10 Data Center Industry Trends in 2026', 'link': 'https://www.tierpoint.com/…', 'position': 3}, …]}</div>
+      </div>
+    </div>
+
+    <!-- Timeline (RIGHT) -->
+    <div style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:8px; padding:11px 16px; border-bottom:1px solid var(--line);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        <span class="sora" style="font-size:13px; font-weight:600; flex:1;">Timeline</span>
+        <span style="display:inline-flex; align-items:center; gap:7px; font-size:12px; color:#8F5106; font-weight:600;"><span style="width:11px; height:11px; border-radius:99px; border:2px solid var(--run); border-top-color:transparent; display:inline-block;"></span>Running…</span>
+      </div>
+      <div style="flex:1; overflow:hidden;">
+        <div class="trow" style="background:var(--page); border-bottom:1px solid var(--line);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M6 9l6 6 6-6"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+          <span class="sora" style="font-weight:600;">Pete Campbell</span><span style="color:var(--muted); font-size:11px;">9.83s · 1 task</span>
+        </div>
+        <div class="trow" style="padding-left:32px;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M6 9l6 6 6-6"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3.5" width="12" height="17" rx="2"/><path d="M9 11h6"/><path d="M9 15h4"/></svg>
+          <span class="mono" style="font-size:11px;">client_business_overview_and_requirements</span><span class="off">9.83s&nbsp;&nbsp;+0.00s</span>
+        </div>
+        <div class="trow" style="padding-left:54px;">Started<span class="off">+0.00s</span></div>
+        <div class="trow" style="padding-left:54px;">LLM call<span class="pill" style="margin-left:6px;">9.6s</span><span class="off">+9.72s</span></div>
+        <div class="trow" style="padding-left:54px;">Completed<span class="off">+9.83s</span></div>
+
+        <div class="trow" style="background:var(--page); border-bottom:1px solid var(--line);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M6 9l6 6 6-6"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+          <span class="sora" style="font-weight:600;">Don Draper</span><span style="color:var(--muted); font-size:11px;">25.15s (+9.83s) · 1 task</span>
+        </div>
+        <div class="trow" style="padding-left:32px;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M6 9l6 6 6-6"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3.5" width="12" height="17" rx="2"/><path d="M9 11h6"/><path d="M9 15h4"/></svg>
+          <span class="mono" style="font-size:11px;">client_discovery_and_briefing</span><span class="off">25.15s&nbsp;&nbsp;+9.83s</span>
+        </div>
+        <div class="trow" style="padding-left:54px;">Started<span class="off">+0.00s</span></div>
+        <div class="trow" style="padding-left:54px;">LLM call<span class="pill" style="margin-left:6px;">1.7s</span><span class="off">+1.67s</span></div>
+        <div class="trow" style="padding-left:54px; background:var(--asoft); border-left:2px solid var(--accent); border-bottom-color:#C4E0F1;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4.5 4.5 0 0 0-6 6L3 18l3 3 5.7-5.7a4.5 4.5 0 0 0 6-6L14 13l-3-3 3.7-3.7z"/></svg>
+          <span class="mono" style="font-size:11px; color:var(--accent); font-weight:600;">search_the_internet_with_serper</span><span class="pill" style="margin-left:6px;">1.1s</span><span class="off">+2.77s</span></div>
+        <div class="trow" style="padding-left:54px;">Tool Usage Finished<span class="off">+3.28s</span></div>
+        <div class="trow" style="padding-left:54px;">LLM call<span class="pill" style="margin-left:6px;">20.6s</span><span class="off">+24.91s</span></div>
+        <div class="trow" style="padding-left:54px;">Completed<span class="off">+25.15s</span></div>
+
+        <div class="trow" style="background:var(--page); border-bottom:1px solid var(--line);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M9 6l6 6-6 6"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+          <span class="sora" style="font-weight:600;">Sal Romano</span>
+          <span style="display:inline-flex; align-items:center; gap:6px; font-size:11px; color:#8F5106; font-weight:600;"><span style="width:10px; height:10px; border-radius:99px; border:2px solid var(--run); border-top-color:transparent; display:inline-block;"></span>running · 1 task</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Studio Chat (floating panel, right — mirrored) -->
+  <div style="position:absolute; z-index:12; top:12px; right:12px; bottom:12px; width:340px; background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:0 1px 2px rgba(19,36,48,.06), 0 10px 30px rgba(19,36,48,.12); display:flex; flex-direction:column; overflow:hidden;">
+    <div style="display:flex; align-items:center; gap:8px; padding:11px 14px; border-bottom:1px solid var(--line);">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8L12 3z"/></svg>
+      <span class="sora" style="font-size:13.5px; font-weight:600; flex:1;">Studio Chat</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M9 6l6 6-6 6"/></svg>
+    </div>
+    <div style="flex:1; min-height:0; overflow:hidden; padding:12px 14px; display:flex; flex-direction:column; gap:10px;">
+      <div style="background:var(--surface2); border-radius:10px; padding:10px 12px; font-size:12.5px; line-height:1.5;">Why did discovery take 25 seconds?</div>
+      <div style="font-size:12.5px; line-height:1.5;">Most of it is one long LLM call (20.6s) synthesizing the brief after two quick Serper searches. If you want it faster, I can split the synthesis into a shorter summary task or switch this agent to a lighter model.</div>
+    </div>
+    <div style="margin:0 14px 10px; border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--page);">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <span class="chip" style="height:20px; font-size:10.5px; font-weight:600;"><span style="width:6px; height:6px; border-radius:99px; background:var(--accent);"></span>Suggestion</span>
+        <span style="font-size:11px; color:var(--muted); font-weight:600;">Dismiss</span>
+      </div>
+      <div class="btn" style="background:var(--ink); color:#FFFFFF; width:100%; justify-content:center; margin-top:9px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8L12 3z"/></svg>Improve automation based on last run</div>
+    </div>
+    <div style="margin:0 14px 14px; border:1px solid var(--line); border-radius:10px; padding:10px 12px;">
+      <div style="font-size:12.5px; color:var(--muted); min-height:34px;">Describe your automation</div>
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M21 12.5l-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8L13 5a3.7 3.7 0 0 1 5.2 5.2L10 18.4a1.85 1.85 0 0 1-2.6-2.6L15 8.2"/></svg>
+        <span class="btn pri" style="height:28px; font-size:12px;">Send<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg></span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

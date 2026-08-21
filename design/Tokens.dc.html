@@ -1,0 +1,113 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+  <style>
+    body { margin:0; }
+    * { box-sizing:border-box; }
+    a { color:#0A7ABF; } a:hover { color:#075E94; }
+    .sora { font-family:Sora,system-ui,sans-serif; }
+    .mono { font-family:"JetBrains Mono",ui-monospace,monospace; }
+    .slabel { font-family:Sora,system-ui,sans-serif; font-size:11px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:#5A7184; }
+    .sw { display:flex; flex-direction:column; gap:5px; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:10px; color:#5A7184; }
+    .sw i { display:block; width:100%; height:40px; border-radius:8px; border:1px solid #DCE6ED; }
+    .ramp { display:flex; align-items:baseline; gap:14px; border-bottom:1px solid #EBF2F7; padding:8px 0; }
+    .ramp .m { font-family:"JetBrains Mono",ui-monospace,monospace; font-size:10px; color:#5A7184; width:150px; flex:none; }
+  </style>
+</helmet>
+<div style="width:1160px; height:900px; overflow:hidden; position:relative; background:#F5F8FA; color:#14212B; font-family:'Public Sans',system-ui,sans-serif; font-size:13.5px; padding:28px 32px;">
+  <div class="sora" style="font-size:20px; font-weight:700;">Tenki Studio · Foundations</div>
+  <div style="font-size:12.5px; color:#5A7184; margin-top:3px;">Tokens per PRD §8.2 — sky accent, cool blue-biased neutrals, weather glyphs as accent only (never for status).</div>
+
+  <div style="display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:28px; margin-top:24px;">
+    <!-- Color -->
+    <div style="background:#FFFFFF; border:1px solid #DCE6ED; border-radius:12px; padding:18px 20px;">
+      <div class="slabel">Color · light</div>
+      <div style="display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:10px; margin-top:12px;">
+        <span class="sw"><i style="background:#F5F8FA;"></i>page F5F8FA</span>
+        <span class="sw"><i style="background:#FFFFFF;"></i>surface FFFFFF</span>
+        <span class="sw"><i style="background:#EBF2F7;"></i>surface-2 EBF2F7</span>
+        <span class="sw"><i style="background:#14212B;"></i>ink 14212B</span>
+        <span class="sw"><i style="background:#5A7184;"></i>muted 5A7184</span>
+        <span class="sw"><i style="background:#DCE6ED;"></i>line DCE6ED</span>
+        <span class="sw"><i style="background:#0A7ABF;"></i>accent 0A7ABF</span>
+        <span class="sw"><i style="background:#075E94;"></i>pressed 075E94</span>
+        <span class="sw"><i style="background:#E1F0F9;"></i>accent-soft E1F0F9</span>
+        <span class="sw"><i style="background:#1E7F4F;"></i>success 1E7F4F</span>
+        <span class="sw"><i style="background:#DD7A10;"></i>running DD7A10</span>
+        <span class="sw"><i style="background:#B97709;"></i>warning B97709</span>
+        <span class="sw"><i style="background:#F7EDDB;"></i>warn-soft F7EDDB</span>
+        <span class="sw"><i style="background:#C4372C;"></i>danger C4372C</span>
+      </div>
+      <div class="slabel" style="margin-top:18px;">Color · dark</div>
+      <div style="display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:10px; margin-top:12px;">
+        <span class="sw"><i style="background:#0D161D;"></i>page 0D161D</span>
+        <span class="sw"><i style="background:#152029;"></i>surface 152029</span>
+        <span class="sw"><i style="background:#1B2C38;"></i>surface-2 1B2C38</span>
+        <span class="sw"><i style="background:#E4EEF5;"></i>ink E4EEF5</span>
+        <span class="sw"><i style="background:#8FA6B5;"></i>muted 8FA6B5</span>
+        <span class="sw"><i style="background:#24384A;"></i>line 24384A</span>
+        <span class="sw"><i style="background:#4FB3E8;"></i>accent 4FB3E8</span>
+        <span class="sw"><i style="background:#12293A;"></i>accent-soft 12293A</span>
+        <span class="sw"><i style="background:#54B586;"></i>success 54B586</span>
+        <span class="sw"><i style="background:#E89A45;"></i>running E89A45</span>
+        <span class="sw"><i style="background:#D9A445;"></i>warning D9A445</span>
+        <span class="sw"><i style="background:#E06B60;"></i>danger E06B60</span>
+      </div>
+    </div>
+
+    <!-- Shape & spacing -->
+    <div style="background:#FFFFFF; border:1px solid #DCE6ED; border-radius:12px; padding:18px 20px;">
+      <div class="slabel">Shape</div>
+      <div style="display:flex; gap:12px; margin-top:12px; align-items:flex-end;">
+        <div style="width:86px; height:56px; border:1px solid #DCE6ED; border-radius:10px; background:#F5F8FA; display:flex; align-items:center; justify-content:center; font-size:10.5px; color:#5A7184;" class="mono">card 10</div>
+        <div style="width:86px; height:40px; border:1px solid #DCE6ED; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:10.5px; color:#5A7184;" class="mono">control 8</div>
+        <div style="width:86px; height:26px; border:1px solid #DCE6ED; border-radius:999px; display:flex; align-items:center; justify-content:center; font-size:10.5px; color:#5A7184;" class="mono">chip 999</div>
+      </div>
+      <div class="slabel" style="margin-top:18px;">Elevation</div>
+      <div style="display:flex; gap:12px; margin-top:12px;">
+        <div style="width:120px; height:48px; background:#FFFFFF; border:1px solid #DCE6ED; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:10.5px; color:#5A7184;" class="mono">flat · borders</div>
+        <div style="width:120px; height:48px; background:#FFFFFF; border:1px solid #DCE6ED; border-radius:10px; box-shadow:0 1px 2px rgba(19,36,48,.05), 0 8px 20px rgba(19,36,48,.07); display:flex; align-items:center; justify-content:center; font-size:10.5px; color:#5A7184;" class="mono">floating</div>
+      </div>
+      <div class="slabel" style="margin-top:18px;">Spacing scale</div>
+      <div style="display:flex; align-items:flex-end; gap:8px; margin-top:12px;">
+        <div style="width:4px; height:4px; background:#0A7ABF; border-radius:2px;"></div>
+        <div style="width:8px; height:8px; background:#0A7ABF; border-radius:2px;"></div>
+        <div style="width:12px; height:12px; background:#0A7ABF; border-radius:3px;"></div>
+        <div style="width:16px; height:16px; background:#0A7ABF; border-radius:3px;"></div>
+        <div style="width:24px; height:24px; background:#0A7ABF; border-radius:4px;"></div>
+        <div style="width:32px; height:32px; background:#0A7ABF; border-radius:5px;"></div>
+        <span class="mono" style="font-size:10px; color:#5A7184; margin-left:6px;">4 · 8 · 12 · 16 · 24 · 32</span>
+      </div>
+      <div class="slabel" style="margin-top:18px;">Canvas</div>
+      <div style="margin-top:10px; height:64px; border:1px solid #DCE6ED; border-radius:10px; background-color:#F8FBFD; background-image:radial-gradient(circle, #C7D6E1 1px, transparent 1px); background-size:16px 16px; display:flex; align-items:center; justify-content:center; font-size:10.5px; color:#5A7184;" class="mono">16px dot grid · 252px nodes · accent connector dots</div>
+    </div>
+  </div>
+
+  <!-- Type -->
+  <div style="background:#FFFFFF; border:1px solid #DCE6ED; border-radius:12px; padding:18px 20px; margin-top:20px;">
+    <div class="slabel">Type — Sora (display · nav) / Public Sans (body · controls) / JetBrains Mono (code · ids · prompts)</div>
+    <div style="margin-top:8px;">
+      <div class="ramp"><span class="m">display / Sora 700 / 27</span><span class="sora" style="font-size:27px; font-weight:700;">What would you like to build today?</span></div>
+      <div class="ramp"><span class="m">title / Sora 600 / 19</span><span class="sora" style="font-size:19px; font-weight:600;">Mad Men AI Poster Generator</span></div>
+      <div class="ramp"><span class="m">heading / Sora 600 / 14</span><span class="sora" style="font-size:14px; font-weight:600;">Studio Chat</span></div>
+      <div class="ramp"><span class="m">body / Public Sans 400 / 13.5</span><span style="font-size:13.5px;">Build, test, and deploy your AI agent automation.</span></div>
+      <div class="ramp"><span class="m">caption / Public Sans 500 / 11.5</span><span style="font-size:11.5px; color:#5A7184; font-weight:500;">Value is set — override if needed</span></div>
+      <div class="ramp" style="border-bottom:0;"><span class="m">code / JetBrains Mono / 11.5</span><span class="mono" style="font-size:11.5px;">search_the_internet_with_serper · claude-sonnet-5 · {client_name}</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1160,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

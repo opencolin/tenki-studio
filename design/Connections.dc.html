@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+  <style>
+    body { margin:0; }
+    * { box-sizing:border-box; }
+    a { color:#0A7ABF; } a:hover { color:#075E94; }
+    .sora { font-family:Sora,system-ui,sans-serif; }
+    .mono { font-family:"JetBrains Mono",ui-monospace,monospace; }
+    .navi { display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:8px; font-size:13px; color:var(--navink); font-weight:500; }
+    .navi svg { flex:none; opacity:.7; }
+    .navi.on { background:var(--surface2); color:var(--ink); }
+    .navi.on svg { opacity:1; color:var(--accent); }
+    .nlabel { font-family:Sora,system-ui,sans-serif; font-size:10.5px; font-weight:600; letter-spacing:.1em; color:var(--muted); text-transform:uppercase; margin:16px 10px 5px; }
+    .btn { height:32px; padding:0 13px; border-radius:8px; font-family:Sora,system-ui,sans-serif; font-size:12.5px; font-weight:600; display:inline-flex; align-items:center; gap:7px; border:1px solid transparent; color:var(--ink); white-space:nowrap; }
+    .btn.pri { background:var(--accent); color:#FFFFFF; }
+    .btn.gho { background:var(--surface); border-color:var(--line); }
+    .chip { display:inline-flex; align-items:center; gap:6px; height:22px; padding:0 9px; border-radius:999px; border:1px solid var(--line); background:var(--surface); font-size:11.5px; font-weight:500; color:var(--muted); }
+    th { font-family:Sora,system-ui,sans-serif; font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); text-align:left; font-weight:600; padding:11px 16px; border-bottom:1px solid var(--line); background:var(--page); }
+    td { padding:15px 16px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:middle; }
+  </style>
+</helmet>
+<div style="--page:#F5F8FA; --surface:#FFFFFF; --surface2:#EBF2F7; --ink:#14212B; --muted:#5A7184; --line:#DCE6ED; --accent:#0A7ABF; --asoft:#E1F0F9; --navink:#3D5566; width:1440px; height:900px; overflow:hidden; position:relative; display:flex; background:var(--page); color:var(--ink); font-family:'Public Sans',system-ui,sans-serif; font-size:13.5px;">
+
+  <!-- Org pill (top-left, collapsed nav) -->
+  <div style="position:absolute; top:12px; left:12px; z-index:20; height:38px; display:flex; align-items:center; gap:8px; padding:0 6px; background:var(--surface); border:1px solid var(--line); border-radius:11px; box-shadow:0 1px 2px rgba(19,36,48,.06), 0 6px 20px rgba(19,36,48,.10);">
+    <span style="width:24px; height:24px; border-radius:7px; background:var(--accent); display:inline-flex; align-items:center; justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.6 1.6A4 4 0 0 0 7 19h10.5z"/></svg></span>
+    <span class="sora" style="font-size:12.5px; font-weight:600;">Dabl Club</span>
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);"><path d="M6 9l6 6 6-6"/></svg>
+    <span style="width:1px; align-self:stretch; background:var(--line); margin:6px 0;"></span>
+    <span style="width:30px; height:30px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; color:var(--muted);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9.5 4v16"/></svg></span>
+  </div>
+
+  <!-- Content -->
+  <div style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; padding:0 28px 24px;">
+    <div style="padding:40px 0 0 184px; font-size:12.5px; color:var(--muted);">LLM Connections</div>
+    <div style="display:flex; align-items:center; padding:10px 0 18px;">
+      <div style="display:flex; align-items:center; gap:13px;">
+        <span style="width:38px; height:38px; border-radius:10px; background:var(--asoft); display:inline-flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span>
+        <div>
+          <div class="sora" style="font-size:20px; font-weight:600;">LLM Connections</div>
+          <div style="font-size:12.5px; color:var(--muted); margin-top:2px;">Manage your language model API connections</div>
+        </div>
+      </div>
+      <div style="margin-left:auto; display:flex; gap:8px;">
+        <span class="btn gho"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.3"/><path d="M21 3v6h-6"/></svg>Refresh</span>
+        <span class="btn pri"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>Add Connection</span>
+      </div>
+    </div>
+
+    <div style="background:var(--surface); border:1px solid var(--line); border-radius:12px; overflow:hidden;">
+      <div style="padding:14px 16px; border-bottom:1px solid var(--line);">
+        <div style="height:36px; max-width:420px; border:1px solid var(--line); border-radius:8px; display:flex; align-items:center; gap:9px; padding:0 12px; color:var(--muted); font-size:12.5px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Search by name or provider…</div>
+      </div>
+      <table style="width:100%; border-collapse:collapse;">
+        <tr><th style="width:24%;">Name</th><th style="width:14%;">Provider</th><th>Available Models</th><th style="text-align:right; width:9%;">Actions</th></tr>
+        <tr>
+          <td class="sora" style="font-weight:600;">Dabl Anthropic</td>
+          <td><span class="chip">Anthropic</span></td>
+          <td class="mono" style="font-size:11px; color:var(--muted);">claude-fable-5, claude-opus-5, claude-sonnet-5, claude-haiku-4-5</td>
+          <td style="text-align:right; color:var(--muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></td>
+        </tr>
+        <tr>
+          <td class="sora" style="font-weight:600;">Colin's OpenAI</td>
+          <td><span class="chip">OpenAI</span></td>
+          <td class="mono" style="font-size:11px; color:var(--muted);">gpt-5.2-chat-latest, gpt-5.2-pro, gpt-4o, gpt-4o-mini</td>
+          <td style="text-align:right; color:var(--muted);"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></td>
+        </tr>
+        <tr>
+          <td class="sora" style="font-weight:600; border-bottom:none;">Google Voice</td>
+          <td style="border-bottom:none;"><span class="chip">Gemini</span></td>
+          <td class="mono" style="font-size:11px; color:var(--muted); border-bottom:none;">gemini-3-pro-preview, gemini-2.5-pro-preview-03-25, gemini-2.5-flash-preview-04-17</td>
+          <td style="text-align:right; color:var(--muted); border-bottom:none;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
