@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { CrewSpec } from "@/lib/crew";
+import type { CrewView } from "@/lib/crew";
 import { agentById } from "@/lib/crew";
 import { fmt, type RunEvent, type RunState } from "@/lib/run";
 import * as I from "./Icons";
@@ -21,7 +21,7 @@ const surface: React.CSSProperties = {
 
 /* ------------------------------- Output ------------------------------- */
 
-export function OutputView({ spec, run }: { spec: CrewSpec; run: RunState }) {
+export function OutputView({ spec, run }: { spec: CrewView; run: RunState }) {
   const seen = run.events;
   const done = new Set(seen.filter((e) => e.type === "task_completed").map((e) => e.taskId));
   const started = new Set(seen.filter((e) => e.type === "task_started").map((e) => e.taskId));
@@ -241,7 +241,7 @@ export function OutputView({ spec, run }: { spec: CrewSpec; run: RunState }) {
 
 /* ------------------------------- Traces ------------------------------- */
 
-export function TracesView({ spec, run }: { spec: CrewSpec; run: RunState }) {
+export function TracesView({ spec, run }: { spec: CrewView; run: RunState }) {
   const [selected, setSelected] = useState<number | null>(null);
   const [tab, setTab] = useState<"details" | "raw">("details");
 

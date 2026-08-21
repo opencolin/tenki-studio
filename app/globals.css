@@ -643,3 +643,45 @@ select {
   max-width: 1180px;
   margin: 0 auto;
 }
+
+/* Boundary nodes — the crew's public interface (graphInput / graphOutput / graphProp) */
+.rf-boundary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px dashed var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-node);
+  min-width: 150px;
+}
+.rf-boundary.selected {
+  border-style: solid;
+  border-color: var(--accent);
+}
+
+.clamp-2,
+.clamp-3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.clamp-2 { -webkit-line-clamp: 2; }
+.clamp-3 { -webkit-line-clamp: 3; }
+
+.warn-dot {
+  position: absolute;
+  top: -9px;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--warn-soft);
+  border: 1px solid var(--warn-line);
+  color: var(--warn-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

@@ -11,6 +11,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@fbp/spec": "^1.1.0",
     "@xyflow/react": "^12.3.6",
     "next": "^16.3.1",
     "react": "^19.0.0",

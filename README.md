@@ -53,6 +53,43 @@ and a run you can start and watch. Hit **Run**, give it a `client_name`, and the
 streams in — steps completing, LLM calls and tool calls with durations, an inspector for
 every event, and the artifact the crew "wrote" into the sandbox.
 
+### Storage format
+
+Crew graphs are stored as **Flow-Based Programming graphs** using
+[`@fbp/spec`](https://www.npmjs.com/package/@fbp/spec) — a minimal, merkle-friendly
+format where a graph is nodes, per-scope edges, and node definitions.
+
+The mapping ([`lib/fbp.ts`](lib/fbp.ts)):
+
+| Crew concept | FBP |
+|---|---|
+| Agent, task, trigger | `Node` whose `type` names a `NodeDefinition` in the `crew` context |
+| Role, goal, model, tools, description | `props: PropValue[]` on the node |
+| "This agent performs this task" | `Edge` from the agent's `agent` output to the task's `agent` input |
+| "This task feeds that one" | `Edge` from `output` → `context` (a `multi` port, so fan-in is explicit) |
+| Crew inputs (`client_name`) | `graphInput` boundary node |
+| Process type | `graphProp` boundary node |
+| Canvas layout | `meta.x` / `meta.y` |
+
+Two things this buys over the hand-rolled model it replaced, where edges were
+*derived* from foreign keys (`task.agent`, `task.context[]`):
+
+- **Edges are stored, so they can carry meaning.** An `Edge` has a `channel`, so
+  error and control routing become first-class instead of impossible.
+- **Subnets are free.** A node with `nodes`/`edges` is a nested graph, which is
+  the natural home for the multi-crew composition the PRD lists as a non-goal.
+
+`lib/crew.ts` projects a stored graph into the flat view the UI and run engine
+read; writes go through the `@fbp/spec` API (`setProps`, `setPosition`, `addEdge`,
+…), which is immutable and path-addressed. Nothing in the UI mutates a graph
+directly.
+
+> Note for contributors: code against the packages' shipped `.d.ts`, not their
+> READMEs. `NodeDefinition` is `{ context, name }` (the README says `type`), and
+> `graph.schema.json` referenced by the validation example is not published.
+> `@fbp/types` and `@fbp/spec` also declare *different, incompatible* `Graph`
+> types — this project depends only on `@fbp/spec`.
+
 ### Design notes
 
 Two deliberate departures from the tool this is modelled on:

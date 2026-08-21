@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NavPill } from "@/components/Chrome";
 import { CrewCanvas, type CanvasApi, type TaskStatus } from "@/components/CrewCanvas";
 import { ChatPanel } from "@/components/ChatPanel";
 import { EnvModal, InputsModal, ShareModal } from "@/components/Modals";
 import { OutputView, TracesView } from "@/components/RunViews";
 import * as I from "@/components/Icons";
-import { madMen, validate, type Process } from "@/lib/crew";
+import { defaultGraph, toCrew, validate, type Process } from "@/lib/crew";
+import type { Graph } from "@/lib/fbp";
+import { setPosition, setProps } from "@fbp/spec";
 import { buildScript, fmt, type RunState } from "@/lib/run";
 
 type View = "canvas" | "output" | "traces";
@@ -15,7 +17,10 @@ type View = "canvas" | "output" | "traces";
 const IDLE: RunState = { status: "idle", startedAt: null, elapsedMs: 0, events: [], inputs: {} };
 
 export default function StudioPage() {
-  const [spec, setSpec] = useState({ ...madMen });
+  // The FBP graph is the source of truth; the crew view is derived from it.
+  const [graph, setGraph] = useState<Graph>(defaultGraph);
+  const [version, setVersion] = useState(9);
+  const crew = useMemo(() => toCrew(graph), [graph]);
   const [view, setView] = useState<View>("canvas");
   const [run, setRun] = useState<RunState>(IDLE);
   const [modal, setModal] = useState<null | "env" | "share" | "inputs">(null);
@@ -26,7 +31,7 @@ export default function StudioPage() {
   const api = useRef<CanvasApi | null>(null);
   const timers = useRef<number[]>([]);
 
-  const warnings = validate(spec);
+  const warnings = validate(crew);
 
   const clearTimers = () => {
     timers.current.forEach((t) => window.clearTimeout(t));
@@ -53,7 +58,7 @@ export default function StudioPage() {
   const startRun = useCallback(
     (inputs: Record<string, string>) => {
       clearTimers();
-      const script = buildScript(spec, inputs);
+      const script = buildScript(crew, inputs);
       setRun({ status: "provisioning", startedAt: Date.now(), elapsedMs: 0, events: [], inputs });
       setView("output");
       setToast({
@@ -74,7 +79,7 @@ export default function StudioPage() {
         timers.current.push(t);
       }
     },
-    [spec],
+    [crew],
   );
 
   const stopRun = () => {
@@ -84,7 +89,7 @@ export default function StudioPage() {
   };
 
   const statuses: Record<string, TaskStatus> = {};
-  for (const t of spec.tasks) statuses[t.id] = "idle";
+  for (const t of crew.tasks) statuses[t.id] = "idle";
   for (const e of run.events) {
     if (e.type === "task_started" && e.taskId) statuses[e.taskId] = "running";
     if (e.type === "task_completed" && e.taskId) statuses[e.taskId] = "done";
@@ -98,7 +103,7 @@ export default function StudioPage() {
 
   return (
     <main style={{ height: "100vh", overflow: "hidden", position: "relative", ...canvasBg }}>
-      <NavPill project={spec.name} />
+      <NavPill project={crew.name} />
 
       {/* View switcher */}
       <div className="bar" style={{ top: 12, left: 429, height: 38, padding: 4 }}>
@@ -152,36 +157,18 @@ export default function StudioPage() {
             style={{ top: 60, right: 364, width: 212, flexDirection: "column", alignItems: "stretch", padding: "10px 12px" }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11.5, color: "var(--muted)" }}>
-              Version {spec.version}
+              Version {version}
               <span className="badge ok" style={{ marginLeft: "auto", height: 19, fontSize: 10 }}>
                 Autosaved
               </span>
             </div>
-            <label
-              style={{
-                marginTop: 8,
-                border: "1px solid var(--line)",
-                borderRadius: 8,
-                padding: "6px 10px",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                cursor: "pointer",
-              }}
-            >
-              <span style={{ flex: 1 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, display: "block" }}>
-                  {spec.process === "sequential" ? "Sequential" : "Hierarchical"}
-                </span>
-                <span style={{ fontSize: 10.5, color: "var(--muted)" }}>
-                  {spec.process === "sequential" ? "Tasks run in order" : "Manager coordinates agents"}
-                </span>
-              </span>
+            <div style={{ marginTop: 8 }}>
               <select
-                value={spec.process}
+                value={crew.process}
                 onChange={(e) => {
                   const process = e.target.value as Process;
-                  setSpec((s) => ({ ...s, process }));
+                  setGraph((g) => setProps(g, "/prop_process", [{ name: "value", value: process }]));
+                  setVersion((v) => v + 1);
                   setToast({
                     title: "Process updated",
                     body:
@@ -192,18 +179,24 @@ export default function StudioPage() {
                 }}
                 aria-label="Process type"
                 style={{
-                  position: "absolute",
-                  opacity: 0,
-                  width: 32,
+                  width: "100%",
                   height: 32,
+                  border: "1px solid var(--line)",
+                  borderRadius: 8,
+                  background: "var(--surface)",
+                  padding: "0 8px",
+                  fontSize: 12,
+                  fontWeight: 600,
                   cursor: "pointer",
                 }}
               >
                 <option value="sequential">Sequential</option>
                 <option value="hierarchical">Hierarchical</option>
               </select>
-              <I.ChevronDown size={13} style={{ color: "var(--muted)" }} />
-            </label>
+              <div style={{ fontSize: 10.5, color: "var(--muted)", marginTop: 4 }}>
+                {crew.process === "sequential" ? "Tasks run in order" : "Manager coordinates agents"}
+              </div>
+            </div>
           </div>
 
           {/* Tool rail */}
@@ -310,10 +303,11 @@ export default function StudioPage() {
 
           <div style={{ position: "absolute", inset: 0, right: 364 }}>
             <CrewCanvas
-              spec={spec}
+              graph={graph}
               statuses={statuses}
               warnings={warnings.map((w) => w.nodeId)}
               onEdit={(id) => setToast({ title: "Inspector", body: `Editing ${id} — the properties form lands here.` })}
+              onMoveNode={(name, x, y) => setGraph((g) => setPosition(g, `/${name}`, x, y))}
               onApi={(a) => (api.current = a)}
               onZoomChange={setZoom}
             />
@@ -321,8 +315,8 @@ export default function StudioPage() {
         </>
       )}
 
-      {view === "output" && <OutputView spec={spec} run={run} />}
-      {view === "traces" && <TracesView spec={spec} run={run} />}
+      {view === "output" && <OutputView spec={crew} run={run} />}
+      {view === "traces" && <TracesView spec={crew} run={run} />}
 
       <ChatPanel
         onRun={() => setModal("inputs")}
@@ -330,11 +324,11 @@ export default function StudioPage() {
         onSuggestion={() => setView("canvas")}
       />
 
-      {modal === "env" && <EnvModal spec={spec} onClose={() => setModal(null)} />}
+      {modal === "env" && <EnvModal spec={crew} onClose={() => setModal(null)} />}
       {modal === "share" && <ShareModal onClose={() => setModal(null)} />}
       {modal === "inputs" && (
         <InputsModal
-          spec={spec}
+          spec={crew}
           initial={run.inputs.client_name ? run.inputs : { client_name: "Tenki.cloud" }}
           onCancel={() => setModal(null)}
           onRun={(inputs) => {

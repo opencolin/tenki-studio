@@ -1,9 +1,27 @@
-/** The crew spec — PRD §10.1. This is the shape the canvas edits, the copilot
- *  mutates, and the runner would receive as crew.json inside the sandbox. */
+/**
+ * The crew *view* — a flat, typed projection of an FBP graph for the UI and
+ * the run engine to read.
+ *
+ * Storage is `lib/fbp.ts` (an `@fbp/spec` Graph). Nothing here is persisted;
+ * every field below is derived. Writes go through the `@fbp/spec` API against
+ * the graph, never against these objects.
+ */
+
+import type { Graph, Node } from "./fbp";
+import {
+  agentNodes,
+  agentOf,
+  contextOf,
+  graphInputs,
+  graphProp,
+  madMenGraph,
+  orderedTasks,
+  prop,
+} from "./fbp";
 
 export type Process = "sequential" | "hierarchical";
 
-export interface Agent {
+export interface AgentView {
   id: string;
   name: string;
   role: string;
@@ -14,8 +32,9 @@ export interface Agent {
   position: { x: number; y: number };
 }
 
-export interface Task {
+export interface TaskView {
   id: string;
+  /** Runtime identifier — what the trace shows. Same as the graph node name. */
   name: string;
   title: string;
   description: string;
@@ -25,16 +44,13 @@ export interface Task {
   position: { x: number; y: number };
 }
 
-export interface CrewSpec {
-  slug: string;
+export interface CrewView {
   name: string;
   process: Process;
-  version: number;
   inputs: string[];
   envRequirements: string[];
-  agents: Agent[];
-  tasks: Task[];
-  triggerPosition: { x: number; y: number };
+  agents: AgentView[];
+  tasks: TaskView[];
 }
 
 export const TOOLS: Record<string, { label: string; env?: string }> = {
@@ -54,120 +70,65 @@ export const MODELS = [
   "gemini-3-pro-preview",
 ];
 
-export const madMen: CrewSpec = {
-  slug: "mad-men-poster-generator",
-  name: "Mad Men AI Poster Generator",
-  process: "sequential",
-  version: 9,
-  inputs: ["client_name"],
-  envRequirements: ["SERPER_API_KEY"],
-  triggerPosition: { x: 40, y: 470 },
-  agents: [
-    {
-      id: "agt_pete",
-      name: "Pete Campbell",
-      role: "Account Executive",
-      goal: "Manage client relationships for {client_name} and run a thorough discovery.",
-      backstory:
-        "You are the account man. You get the client talking, and you come back with the brief nobody else could get.",
-      model: "claude-sonnet-5",
-      tools: ["serper_search"],
-      position: { x: 40, y: 0 },
-    },
-    {
-      id: "agt_don",
-      name: "Don Draper",
-      role: "Creative Director",
-      goal: "Develop the strategic creative framework for the {client_name} campaign.",
-      backstory:
-        "You find the one true thing about a product and say it in a way nobody forgets. You are never precious about a draft.",
-      model: "gpt-4o",
-      tools: ["serper_search"],
-      position: { x: 342, y: 0 },
-    },
-    {
-      id: "agt_sal",
-      name: "Sal Romano",
-      role: "Art Director",
-      goal: "Design visually stunning and strategically effective creative for {client_name}.",
-      backstory:
-        "You think in layouts. You know how a 1960s magazine spread breathes, and you can specify it precisely.",
-      model: "claude-sonnet-5",
-      tools: ["serper_search"],
-      position: { x: 644, y: 0 },
-    },
-    {
-      id: "agt_peggy",
-      name: "Peggy Olson",
-      role: "Copywriter",
-      goal: "Craft compelling, persuasive copy for {client_name} campaigns.",
-      backstory:
-        "You started in the typing pool and you write better headlines than anyone on the floor. You fight for the good line.",
-      model: "claude-sonnet-5",
-      tools: [],
-      position: { x: 272, y: 470 },
-    },
-  ],
-  tasks: [
-    {
-      id: "tsk_overview",
-      name: "client_business_overview_and_requirements",
-      title: "Client Business Overview and Requirements",
-      description:
-        "Provide comprehensive information about {client_name} including company background, business objectives, target audience demographics, competitive positioning, current marketing challenges, budget considerations, and campaign goals.",
-      expectedOutput:
-        "A detailed client briefing document outlining business background, marketing objectives, target audience analysis, competitive landscape, budget parameters, and specific campaign requirements.",
-      agent: "agt_pete",
-      context: [],
-      position: { x: 40, y: 240 },
-    },
-    {
-      id: "tsk_discovery",
-      name: "client_discovery_and_briefing",
-      title: "Client Discovery and Briefing",
-      description:
-        "Conduct comprehensive client discovery for {client_name}, researching their business, industry, competitors, target audience, and campaign objectives. Gather everything needed for a detailed creative brief.",
-      expectedOutput:
-        "A creative brief including brand positioning, key messages, budget parameters, timeline, and success metrics.",
-      agent: "agt_don",
-      context: ["tsk_overview"],
-      position: { x: 342, y: 240 },
-    },
-    {
-      id: "tsk_visual",
-      name: "visual_design_specifications",
-      title: "Visual Design Specifications for {client_name} Poster",
-      description:
-        "Create comprehensive visual design specifications for the 1960s Mad Men-style {client_name} poster including typography choices, colour palette refinements, geometric compositions, layout principles, and visual hierarchy.",
-      expectedOutput:
-        "A detailed visual design brief specifying typography, colour schemes, composition layouts, geometric elements, spacing, and period-accurate design principles.",
-      agent: "agt_sal",
-      context: ["tsk_discovery"],
-      position: { x: 644, y: 240 },
-    },
-    {
-      id: "tsk_prompt",
-      name: "final_advertisement_prompt",
-      title: "Final Advertisement Prompt",
-      description:
-        "Create ONE comprehensive, image-model-optimised prompt for a 1960s Mad Men-style advertising poster featuring {client_name}. The prompt should be for the advertisement poster itself — not boardroom scenes or office depictions.",
-      expectedOutput:
-        "A single production-ready image prompt, plus a one-line note on the creative rationale.",
-      agent: "agt_peggy",
-      context: ["tsk_visual"],
-      position: { x: 574, y: 470 },
-    },
-  ],
-};
+const pos = (node: Node) => ({ x: node.meta?.x ?? 0, y: node.meta?.y ?? 0 });
 
-export const agentById = (spec: CrewSpec, id: string) => spec.agents.find((a) => a.id === id);
-export const taskById = (spec: CrewSpec, id: string) => spec.tasks.find((t) => t.id === id);
+function toAgent(node: Node): AgentView {
+  return {
+    id: node.name,
+    name: prop(node, "title", node.name)!,
+    role: prop(node, "role", "")!,
+    goal: prop(node, "goal", "")!,
+    backstory: prop(node, "backstory", "")!,
+    model: prop(node, "model", "")!,
+    tools: prop<string[]>(node, "tools", [])!,
+    position: pos(node),
+  };
+}
+
+function toTask(graph: Graph, node: Node): TaskView {
+  return {
+    id: node.name,
+    name: node.name,
+    title: prop(node, "title", node.name)!,
+    description: prop(node, "description", "")!,
+    expectedOutput: prop(node, "expectedOutput", "")!,
+    agent: agentOf(graph, node.name) ?? "",
+    context: contextOf(graph, node.name),
+    position: pos(node),
+  };
+}
+
+/** Project a stored graph into the shape the UI reads. */
+export function toCrew(graph: Graph): CrewView {
+  const agents = agentNodes(graph).map(toAgent);
+  const tasks = orderedTasks(graph).map((n) => toTask(graph, n));
+  const env = new Set<string>();
+  for (const a of agents) {
+    for (const t of a.tools) {
+      const e = TOOLS[t]?.env;
+      if (e) env.add(e);
+    }
+  }
+  return {
+    name: graph.name ?? "Untitled crew",
+    process: graphProp<Process>(graph, "process", "sequential"),
+    inputs: graphInputs(graph),
+    envRequirements: [...env],
+    agents,
+    tasks,
+  };
+}
+
+export const defaultGraph = madMenGraph;
+
+export const agentById = (crew: CrewView, id: string) => crew.agents.find((a) => a.id === id);
+export const taskById = (crew: CrewView, id: string) => crew.tasks.find((t) => t.id === id);
 
 /** Warnings surfaced by the canvas pill — PRD FR-4.7. */
-export function validate(spec: CrewSpec) {
+export function validate(crew: CrewView) {
   const out: { id: string; nodeId: string; text: string }[] = [];
-  for (const a of spec.agents) {
-    const assigned = spec.tasks.filter((t) => t.agent === a.id);
+  for (const a of crew.agents) {
+    const assigned = crew.tasks.filter((t) => t.agent === a.id);
     if (a.tools.length === 0 && assigned.length > 0) {
       out.push({
         id: `tools-${a.id}`,
@@ -176,12 +137,12 @@ export function validate(spec: CrewSpec) {
       });
     }
   }
-  for (const t of spec.tasks) {
-    if (!agentById(spec, t.agent)) {
+  for (const t of crew.tasks) {
+    if (!t.agent) {
       out.push({ id: `agent-${t.id}`, nodeId: t.id, text: `${t.title} has no agent assigned.` });
     }
   }
-  if (spec.process === "hierarchical") {
+  if (crew.process === "hierarchical") {
     out.push({ id: "manager", nodeId: "manager", text: "Crew Manager has no model selected." });
   }
   return out;

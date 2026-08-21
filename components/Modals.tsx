@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { CrewSpec } from "@/lib/crew";
+import type { CrewView } from "@/lib/crew";
 import * as I from "./Icons";
 
 function Shell({
@@ -82,7 +82,7 @@ function Shell({
 
 const SCOPES = ["All", "Project", "Organization", "LLM connection", "Missing"] as const;
 
-export function EnvModal({ spec, onClose }: { spec: CrewSpec; onClose: () => void }) {
+export function EnvModal({ spec, onClose }: { spec: CrewView; onClose: () => void }) {
   const [scope, setScope] = useState<(typeof SCOPES)[number]>("All");
   const counts: Record<string, number> = { All: 3, Project: 0, Organization: 1, "LLM connection": 2, Missing: 0 };
 
@@ -248,7 +248,7 @@ export function InputsModal({
   onCancel,
   onRun,
 }: {
-  spec: CrewSpec;
+  spec: CrewView;
   initial: Record<string, string>;
   onCancel: () => void;
   onRun: (inputs: Record<string, string>) => void;

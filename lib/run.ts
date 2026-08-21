@@ -6,7 +6,7 @@
  *  behave exactly as they will against a live run.
  */
 
-import type { CrewSpec } from "./crew";
+import type { CrewView } from "./crew";
 
 export type EventType =
   | "run_started"
@@ -61,7 +61,7 @@ const SERPER_OUTPUT = `{'searchParameters': {'q': 'Trends in cloud computing and
     'position': 3}]}`;
 
 /** Builds the scripted trace for a crew + inputs. Offsets are in ms. */
-export function buildScript(spec: CrewSpec, inputs: Record<string, string>): RunEvent[] {
+export function buildScript(spec: CrewView, inputs: Record<string, string>): RunEvent[] {
   const client = inputs.client_name || "your client";
   const fill = (s: string) => s.replace(/\{client_name\}/g, client);
   const events: Omit<RunEvent, "seq">[] = [];
@@ -84,10 +84,10 @@ export function buildScript(spec: CrewSpec, inputs: Record<string, string>): Run
   );
 
   const timings: Record<string, { llm: number[]; tools?: number; total: number }> = {
-    tsk_overview: { llm: [9600], total: 9830 },
-    tsk_discovery: { llm: [1700, 20600], tools: 1100, total: 25150 },
-    tsk_visual: { llm: [9700], total: 9960 },
-    tsk_prompt: { llm: [4080], total: 4300 },
+    client_business_overview_and_requirements: { llm: [9600], total: 9830 },
+    client_discovery_and_briefing: { llm: [1700, 20600], tools: 1100, total: 25150 },
+    visual_design_specifications: { llm: [9700], total: 9960 },
+    final_advertisement_prompt: { llm: [4080], total: 4300 },
   };
 
   for (const task of spec.tasks) {
@@ -199,7 +199,7 @@ export function buildScript(spec: CrewSpec, inputs: Record<string, string>): Run
 
 function taskOutput(taskId: string, client: string) {
   switch (taskId) {
-    case "tsk_overview":
+    case "client_business_overview_and_requirements":
       return `# Client Briefing — ${client}
 
 **Industry:** Cloud infrastructure
@@ -212,7 +212,7 @@ agent-generated code.
 1. Grow awareness among AI engineers building agent products.
 2. Position sandboxes as the default runtime for untrusted code.
 3. Convert self-serve signups into workspace teams.`;
-    case "tsk_discovery":
+    case "client_discovery_and_briefing":
       return `# Creative Brief — ${client}
 
 **The one true thing.** Every serious agent product eventually runs code it
@@ -224,7 +224,7 @@ did not write. ${client} makes that ordinary instead of frightening.
 - Full Linux: any package, real files, a real network.
 
 **Tone.** Confident, dry, engineer-to-engineer. No hyperbole.`;
-    case "tsk_visual":
+    case "visual_design_specifications":
       return `# Visual Design Specification
 
 **Format.** Single-page magazine advertisement, 2:3.
