@@ -54,13 +54,23 @@ export default function StudioPage() {
     if (!target) return;
     setLive(target);
     setView("output");
-    setRun({ status: "provisioning", startedAt: Date.now(), elapsedMs: 0, events: [], inputs: {} });
+    setRun({
+      status: "provisioning",
+      startedAt: Date.now(),
+      elapsedMs: 0,
+      events: [],
+      inputs: { run_id: target.runId },
+    });
     const handle = subscribeToRun(target.base, target.runId, {
       onEvent: (event) =>
         setRun((r) =>
           r.events.some((e) => e.seq === event.seq)
             ? r
-            : { ...r, events: [...r.events, event].sort((a, b) => a.seq - b.seq) },
+            : {
+                ...r,
+                elapsedMs: Math.max(r.elapsedMs, event.at),
+                events: [...r.events, event].sort((a, b) => a.seq - b.seq),
+              },
         ),
       onStatus: (status) => setRun((r) => (r.status === status ? r : { ...r, status })),
       onHeartbeat: () => setBeat(Date.now()),

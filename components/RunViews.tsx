@@ -90,12 +90,14 @@ export function OutputView({
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="sora" style={{ fontSize: 15, fontWeight: 600 }}>
-            Run · client_name = &ldquo;{run.inputs.client_name}&rdquo;
+            {run.inputs.client_name
+              ? `Run · client_name = "${run.inputs.client_name}"`
+              : `Run · ${run.inputs.run_id ?? "untitled"}`}
           </div>
           <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 1 }}>
             {run.status === "provisioning"
               ? "Creating sandbox from project snapshot…"
-              : `${done.size} of ${total} steps complete · ${fmt(run.elapsedMs)} · sandbox booted in 1.2s`}
+              : `${done.size} of ${total} steps complete · ${fmt(run.elapsedMs)}`}
           </div>
         </div>
         {run.status === "completed" ? (
