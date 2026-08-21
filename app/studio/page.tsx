@@ -6,6 +6,7 @@ import { CrewCanvas, type CanvasApi, type TaskStatus } from "@/components/CrewCa
 import { ChatPanel } from "@/components/ChatPanel";
 import { EnvModal, InputsModal, ShareModal } from "@/components/Modals";
 import { OutputView, TracesView } from "@/components/RunViews";
+import { Inspector } from "@/components/Inspector";
 import * as I from "@/components/Icons";
 import { defaultGraph, toCrew, validate, type Process } from "@/lib/crew";
 import type { Graph } from "@/lib/fbp";
@@ -30,6 +31,7 @@ export default function StudioPage() {
   const [zoom, setZoom] = useState(1);
   const [showWarnings, setShowWarnings] = useState(false);
   const [tool, setTool] = useState("select");
+  const [inspecting, setInspecting] = useState<string | null>(null);
   const api = useRef<CanvasApi | null>(null);
   const timers = useRef<number[]>([]);
   const artifactsRef = useRef<Artifact[]>([]);
@@ -216,7 +218,18 @@ export default function StudioPage() {
           </div>
 
           {/* Tool rail */}
-          <div className="bar" style={{ top: 200, left: 12, width: 44, flexDirection: "column", padding: 6, gap: 2 }}>
+          <div
+            className="bar"
+            style={{
+              top: 200,
+              left: inspecting ? 364 : 12,
+              width: 44,
+              flexDirection: "column",
+              padding: 6,
+              gap: 2,
+              transition: "left 160ms ease",
+            }}
+          >
             {[
               { id: "select", icon: I.Cursor, label: "Select" },
               { id: "pan", icon: I.Hand, label: "Pan" },
@@ -322,13 +335,25 @@ export default function StudioPage() {
               graph={graph}
               statuses={statuses}
               warnings={warnings.map((w) => w.nodeId)}
-              onEdit={(id) => setToast({ title: "Inspector", body: `Editing ${id} — the properties form lands here.` })}
+              onEdit={setInspecting}
               onMoveNode={(name, x, y) => setGraph((g) => setPosition(g, `/${name}`, x, y))}
               onApi={(a) => (api.current = a)}
               onZoomChange={setZoom}
             />
           </div>
         </>
+      )}
+
+      {view === "canvas" && inspecting && (
+        <Inspector
+          graph={graph}
+          nodeName={inspecting}
+          onChange={(next) => {
+            setGraph(next);
+            setVersion((v) => v + 1);
+          }}
+          onClose={() => setInspecting(null)}
+        />
       )}
 
       {view === "output" && <OutputView spec={crew} run={run} artifacts={artifacts} />}

@@ -3,27 +3,31 @@
 import { useState } from "react";
 import { PageShell } from "@/components/Chrome";
 import * as I from "@/components/Icons";
+import { PROVIDERS } from "@/lib/providers";
+import { TOOLS } from "@/lib/crew";
 
 const SCOPES = ["All", "Project", "Organization", "LLM connection", "Missing"] as const;
 
 const GROUPS = [
-  {
-    label: "anthropic/claude-sonnet-5, openai/gpt-4o",
-    scope: "LLM connection",
-    vars: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
-  },
-  {
-    label: "Nebius Token Factory, AIsa",
-    scope: "LLM connection",
-    vars: ["NEBIUS_API_KEY", "AISA_API_KEY"],
-  },
-  { label: "SerperDevTool", scope: "Organization", vars: ["SERPER_API_KEY"] },
-  { label: "Tavily", scope: "Organization", vars: ["TAVILY_API_KEY"] },
+  ...PROVIDERS.map((p) => ({
+    label: p.name,
+    scope: "LLM connection" as const,
+    vars: [p.env],
+  })),
+  ...Object.entries(TOOLS)
+    .filter(([, t]) => t.env)
+    .map(([, t]) => ({ label: t.label, scope: "Organization" as const, vars: [t.env!] })),
 ];
 
 export default function EnvironmentPage() {
   const [scope, setScope] = useState<(typeof SCOPES)[number]>("All");
-  const counts: Record<string, number> = { All: 6, Project: 0, Organization: 2, "LLM connection": 4, Missing: 0 };
+  const counts: Record<string, number> = {
+    All: GROUPS.reduce((n, g) => n + g.vars.length, 0),
+    Project: 0,
+    Organization: GROUPS.filter((g) => g.scope === "Organization").reduce((n, g) => n + g.vars.length, 0),
+    "LLM connection": GROUPS.filter((g) => g.scope === "LLM connection").reduce((n, g) => n + g.vars.length, 0),
+    Missing: 0,
+  };
   const groups = GROUPS.filter((g) => scope === "All" || g.scope === scope);
 
   return (

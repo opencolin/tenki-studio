@@ -2,41 +2,9 @@
 
 import { PageShell } from "@/components/Chrome";
 import * as I from "@/components/Icons";
+import { PROVIDERS } from "@/lib/providers";
 
-const ROWS = [
-  {
-    name: "Dabl Anthropic",
-    provider: "Anthropic",
-    models: "claude-fable-5, claude-opus-5, claude-sonnet-5, claude-haiku-4-5",
-    env: "ANTHROPIC_API_KEY",
-  },
-  {
-    name: "Colin's OpenAI",
-    provider: "OpenAI",
-    models: "gpt-5.2-chat-latest, gpt-5.2-pro, gpt-4o, gpt-4o-mini",
-    env: "OPENAI_API_KEY",
-  },
-  {
-    name: "Gemini (shared)",
-    provider: "Gemini",
-    models: "gemini-3-pro-preview, gemini-2.5-pro, gemini-2.5-flash",
-    env: "GEMINI_API_KEY",
-  },
-  {
-    name: "Nebius Token Factory",
-    provider: "Nebius",
-    models: "deepseek-ai/DeepSeek-V3, Qwen/Qwen3-235B-A22B, meta-llama/Llama-3.3-70B-Instruct, +60 open models",
-    env: "NEBIUS_API_KEY",
-    base: "https://api.tokenfactory.nebius.com",
-  },
-  {
-    name: "AIsa",
-    provider: "AIsa",
-    models: "110+ models routed through one key — openai/*, anthropic/*, gemini/*",
-    env: "AISA_API_KEY",
-    base: "https://aisa.one",
-  },
-];
+
 
 export default function ConnectionsPage() {
   return (
@@ -77,24 +45,25 @@ export default function ConnectionsPage() {
               </tr>
             </thead>
             <tbody>
-              {ROWS.map((r) => (
+              {PROVIDERS.map((r) => (
                 <tr key={r.name}>
                   <td className="sora" style={{ fontWeight: 600 }}>
                     {r.name}
                   </td>
                   <td>
-                    <span className="chip">{r.provider}</span>
+                    <span className="chip">{r.vendor}</span>
                   </td>
-                  <td className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>
-                    {r.models}
+                  <td style={{ fontSize: 11, color: "var(--muted)" }}>
+                    <span className="mono">{r.models.join(", ")}</span>
+                    {r.note && <div style={{ marginTop: 3 }}>{r.note}</div>}
                   </td>
                   <td>
                     <span className="mono" style={{ fontSize: 11 }}>
                       {r.env}
                     </span>
-                    {r.base && (
+                    {r.baseUrl && (
                       <div className="mono" style={{ fontSize: 10.5, color: "var(--muted)", marginTop: 3 }}>
-                        {r.base}
+                        {r.baseUrl}
                       </div>
                     )}
                   </td>

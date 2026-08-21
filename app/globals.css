@@ -685,3 +685,27 @@ select {
   align-items: center;
   justify-content: center;
 }
+
+/* Inspector form controls */
+.inp {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--r-control);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 8px 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-family: inherit;
+  resize: vertical;
+}
+.inp:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+select.inp {
+  cursor: pointer;
+  height: 34px;
+  padding: 0 8px;
+}

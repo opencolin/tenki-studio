@@ -8,6 +8,7 @@
  */
 
 import type { Graph, Node } from "./fbp";
+import { providerForModel } from "./providers";
 import {
   agentNodes,
   agentOf,
@@ -71,19 +72,7 @@ export const TOOLS: Record<string, { label: string; env?: string; note?: string 
   read_write_file: { label: "Read / write a file" },
 };
 
-export const MODELS = [
-  "claude-fable-5",
-  "claude-sonnet-5",
-  "claude-haiku-4-5",
-  "gpt-4o",
-  "gpt-4o-mini",
-  "gemini-3-pro-preview",
-  "nebius/deepseek-ai/DeepSeek-V3",
-  "nebius/Qwen/Qwen3-235B-A22B",
-  "nebius/meta-llama/Llama-3.3-70B-Instruct",
-  "aisa/openai/gpt-4o",
-  "aisa/anthropic/claude-sonnet-5",
-];
+export { MODELS, PROVIDERS, providerForModel, shortModel } from "./providers";
 
 const pos = (node: Node) => ({ x: node.meta?.x ?? 0, y: node.meta?.y ?? 0 });
 
@@ -117,12 +106,16 @@ function toTask(graph: Graph, node: Node): TaskView {
 export function toCrew(graph: Graph): CrewView {
   const agents = agentNodes(graph).map(toAgent);
   const tasks = orderedTasks(graph).map((n) => toTask(graph, n));
+  // A crew needs a credential for every tool it uses and every provider it
+  // draws a model from — both feed the Missing tab and block a run.
   const env = new Set<string>();
   for (const a of agents) {
     for (const t of a.tools) {
       const e = TOOLS[t]?.env;
       if (e) env.add(e);
     }
+    const provider = providerForModel(a.model);
+    if (provider) env.add(provider.env);
   }
   return {
     name: graph.name ?? "Untitled crew",

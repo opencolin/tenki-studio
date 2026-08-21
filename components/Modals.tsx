@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { CrewView } from "@/lib/crew";
+import { TOOLS } from "@/lib/crew";
+import { PROVIDERS } from "@/lib/providers";
 import * as I from "./Icons";
 
 function Shell({
@@ -82,18 +84,43 @@ function Shell({
 
 const SCOPES = ["All", "Project", "Organization", "LLM connection", "Missing"] as const;
 
+/**
+ * Credentials the *current crew* needs, derived from its tools and the providers
+ * behind its models — not a hardcoded list. Anything required but unconfigured
+ * shows under Missing. (Blocking a run on Missing is PRD 002 phase 2.)
+ */
+const CONFIGURED = new Set(["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "SERPER_API_KEY"]);
+
+function sourceFor(env: string): { label: string; scope: "LLM connection" | "Organization" } {
+  const provider = PROVIDERS.find((p) => p.env === env);
+  if (provider) return { label: provider.name, scope: "LLM connection" };
+  const tool = Object.values(TOOLS).find((t) => t.env === env);
+  return { label: tool?.label ?? env, scope: "Organization" };
+}
+
 export function EnvModal({ spec, onClose }: { spec: CrewView; onClose: () => void }) {
   const [scope, setScope] = useState<(typeof SCOPES)[number]>("All");
-  const counts: Record<string, number> = { All: 3, Project: 0, Organization: 1, "LLM connection": 2, Missing: 0 };
 
-  const groups = [
-    {
-      label: "anthropic/claude-sonnet-5, openai/gpt-4o",
-      scope: "LLM connection",
-      vars: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"],
-    },
-    { label: "SerperDevTool", scope: "Organization", vars: spec.envRequirements },
-  ].filter((g) => scope === "All" || g.scope === scope || (scope === "Missing" && false));
+  const required = spec.envRequirements.map((env) => ({
+    env,
+    configured: CONFIGURED.has(env),
+    ...sourceFor(env),
+  }));
+
+  const counts: Record<string, number> = {
+    All: required.length,
+    Project: 0,
+    Organization: required.filter((r) => r.scope === "Organization").length,
+    "LLM connection": required.filter((r) => r.scope === "LLM connection").length,
+    Missing: required.filter((r) => !r.configured).length,
+  };
+
+  const groups = required
+    .filter((r) =>
+      scope === "All" ? true : scope === "Missing" ? !r.configured : r.scope === scope,
+    )
+    .map((r) => ({ label: r.label, scope: r.scope, vars: [r.env], configured: r.configured }));
+
 
   return (
     <Shell
@@ -145,6 +172,14 @@ export function EnvModal({ spec, onClose }: { spec: CrewView; onClose: () => voi
         ))}
       </div>
 
+      {groups.length === 0 && (
+        <p style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 18, lineHeight: 1.55 }}>
+          {scope === "Missing"
+            ? "Every credential this crew needs is configured."
+            : "Nothing in this scope."}
+        </p>
+      )}
+
       {groups.map((g) => (
         <div
           key={g.label}
@@ -154,7 +189,13 @@ export function EnvModal({ spec, onClose }: { spec: CrewView; onClose: () => voi
             <span className="sora" style={{ fontSize: 13, fontWeight: 600 }}>
               {g.label}
             </span>
-            <I.CheckCircle size={15} style={{ marginLeft: "auto", color: "var(--ok-ink)" }} />
+            {g.configured ? (
+              <I.CheckCircle size={15} style={{ marginLeft: "auto", color: "var(--ok-ink)" }} />
+            ) : (
+              <span className="badge" style={{ marginLeft: "auto", background: "var(--warn-soft)", color: "var(--warn-ink)" }}>
+                Missing
+              </span>
+            )}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "250px minmax(0,1fr)", gap: 10, marginTop: 11 }}>
             {g.vars.map((v) => (
@@ -163,7 +204,7 @@ export function EnvModal({ spec, onClose }: { spec: CrewView; onClose: () => voi
                   {v}
                 </div>
                 <div className="field mono" style={{ height: 34, fontSize: 11.5, color: "var(--muted)" }}>
-                  Value is set — override if needed
+                  {g.configured ? "Value is set — override if needed" : "Not set — this crew needs it"}
                 </div>
               </div>
             ))}
