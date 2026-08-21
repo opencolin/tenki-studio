@@ -9,6 +9,11 @@ sandbox** instead of on shared infrastructure.
 — served from a Tenki sandbox, which builds this repository from source. Open
 [`/studio`](https://tenki-studio--irtbn5.us.sb.tenki.sh/studio/) and press **Run**.
 
+> **What to build next:** [PRD 002 — Make one run real](docs/PRD-002-make-one-run-real.md)
+> takes stock of what is real versus façade and decides the order of work: the sandbox
+> execution path first, with the node inspector alongside it; multi-framework support,
+> the copilot and deployment deferred until one run actually executes.
+
 > **Status: front-end prototype.** Every screen here is real and interactive, but the
 > run engine is *simulated* — it replays a scripted trace on timers so the Output and
 > Traces views behave exactly as they will against a live run. The orchestrator and the
