@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/_events/:path*",
+      "destination": "https://tenki-events--irtbn5.us.sb.tenki.sh/:path*"
+    },
+    {
+      "source": "/:path*",
+      "destination": "https://tenki-studio--irtbn5.us.sb.tenki.sh/:path*"
+    }
+  ]
+}
