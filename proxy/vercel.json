@@ -2,12 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/_events/:path*",
-      "destination": "https://tenki-events--irtbn5.us.sb.tenki.sh/:path*"
+      "source": "/_events/(.*)",
+      "destination": "https://tenki-events--irtbn5.us.sb.tenki.sh/$1"
     },
     {
-      "source": "/:path*",
-      "destination": "https://tenki-studio--irtbn5.us.sb.tenki.sh/:path*"
+      "source": "/(.*)",
+      "destination": "https://tenki-studio--irtbn5.us.sb.tenki.sh/$1"
     }
   ]
 }

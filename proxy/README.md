@@ -10,6 +10,17 @@ The second rule exists so a live run can be streamed same-origin:
 
     https://tenki.monster/studio/?stream=https://tenki.monster/_events&run=<id>
 
+## Use `(.*)`, not `:path*`
+
+The first version of this file used `"source": "/:path*"`. It silently matched
+only single-segment paths with no trailing slash: `/studio` worked while `/`,
+`/studio/` and `/_next/static/...` all 404'd. Since the studio is exported with
+`trailingSlash: true`, almost every real link was in the broken set — the domain
+looked completely dead while one hand-typed path happened to work.
+
+The regex capture form matches the root, trailing slashes and nested paths.
+Don't "tidy" it back to the named-parameter form.
+
 ## Deployed as
 
 Vercel project `tenki-monster` (team `dablclub`, `prj_MGOepCKQliXtY4B6XySTTPzMPO0Q`).
