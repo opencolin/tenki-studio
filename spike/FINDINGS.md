@@ -52,6 +52,21 @@ stream being reaped in transit. Both are in `ingest.py`.
 different exposed port is a different host — so the ingest sets
 `access-control-allow-origin`. Production should narrow this from `*`.
 
+## Recovering after a reap (added 24 Aug)
+
+Sandboxes do not survive a credit lapse. When the session is reaped the preview
+*routes* remain but point at a dead session, and every request through them
+returns `{"code":"route_not_found","message":"no preview route registered for
+this host"}` — which looks like a proxy or DNS fault and is neither.
+
+Rebinding the same route ids keeps the hostnames identical, so the Vercel proxy
+at tenki.monster needs no change. `scripts/restore-sandbox.sh` does the whole
+recovery: create, clone, build, start both services, unbind and rebind both
+routes, verify through the domain.
+
+Note that `preview-url bind` refuses a route that is still bound to the dead
+session — unbind first.
+
 ## Operational gotchas worth writing down
 
 - **`pkill -f <pattern>` inside `exec` kills the exec shell**, because the
@@ -60,6 +75,10 @@ different exposed port is a different host — so the ingest sets
 - **`/srv` is not writable**; the sandbox user is `tenki` and work belongs under `~`.
 - **`npm i -g` installs outside `PATH`** in the non-login shell, which is why the
   site is served by a zero-dependency Node script rather than `serve`.
+- **`curl` is an unreliable SSE client through the gateway.** Streams that
+  render progressively in a browser returned zero bytes to `curl -sN` under a
+  `timeout`. Verify streaming with the real client before concluding the
+  transport is broken — we nearly "fixed" a working path twice.
 - **Long `exec` commands get their connection reset** — the finding that started
   this. Background the work and poll for a sentinel file.
 
