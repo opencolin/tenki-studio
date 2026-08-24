@@ -117,12 +117,27 @@ class Handler(BaseHTTPRequestHandler):
         self._json(404, {"error": "not found"})
 
     def _stream(self, run_id: str, after: int):
+        # SSE must be chunked. An HTTP/1.1 body with neither Content-Length nor
+        # Transfer-Encoding is unframed: curl on localhost tolerates it and reads
+        # until close, but a proxy has no way to forward it incrementally and
+        # delivers nothing. The Tenki preview gateway did exactly that.
         self.send_response(200)
         self.send_header("content-type", "text/event-stream")
         self.send_header("cache-control", "no-cache")
         self.send_header("connection", "keep-alive")
+        self.send_header("transfer-encoding", "chunked")
+        self.send_header("x-accel-buffering", "no")
         self._cors()
         self.end_headers()
+
+        def chunk(text: str) -> None:
+            body = text.encode()
+            self.wfile.write(f"{len(body):X}\r\n".encode() + body + b"\r\n")
+            self.wfile.flush()
+
+        def end_chunks() -> None:
+            self.wfile.write(b"0\r\n\r\n")
+            self.wfile.flush()
 
         cursor = after
         idle = 0.0
@@ -137,11 +152,10 @@ class Handler(BaseHTTPRequestHandler):
                 for e in pending:
                     cursor = e["seq"]
                     # `id:` lets EventSource resume with Last-Event-ID after a drop.
-                    self.wfile.write(f"id: {e['seq']}\ndata: {json.dumps(e)}\n\n".encode())
-                    self.wfile.flush()
+                    chunk(f"id: {e['seq']}\ndata: {json.dumps(e)}\n\n")
                     if e["type"] in ("run_completed", "run_failed"):
-                        self.wfile.write(b"event: end\ndata: {}\n\n")
-                        self.wfile.flush()
+                        chunk("event: end\ndata: {}\n\n")
+                        end_chunks()
                         return
 
                 if pending:
@@ -149,9 +163,9 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     idle += 1.0
                     # A comment frame keeps proxies from reaping an idle stream.
-                    self.wfile.write(b": keep-alive\n\n")
-                    self.wfile.flush()
+                    chunk(": keep-alive\n\n")
                     if idle > 900:
+                        end_chunks()
                         return
         except (BrokenPipeError, ConnectionResetError):
             return
