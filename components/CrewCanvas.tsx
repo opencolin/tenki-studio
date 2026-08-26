@@ -8,6 +8,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  useUpdateNodeInternals,
   type Edge as RfEdge,
   type Node as RfNode,
   type NodeProps,
@@ -228,6 +229,7 @@ function Flow({
   onMoveNode,
   onApi,
   onZoomChange,
+  layoutKey,
 }: {
   graph: Graph;
   statuses: Record<string, TaskStatus>;
@@ -236,8 +238,23 @@ function Flow({
   onMoveNode?: (name: string, x: number, y: number) => void;
   onApi?: (api: CanvasApi) => void;
   onZoomChange?: (zoom: number) => void;
+  /** Changes whenever the pane is resized by surrounding chrome. */
+  layoutKey?: number | string;
 }) {
   const rf = useReactFlow();
+  const updateNodeInternals = useUpdateNodeInternals();
+
+  // Resizing the pane leaves React Flow without fresh measurements for its
+  // nodes, and nothing re-triggers the per-node ResizeObserver because the
+  // nodes themselves did not change — so they stay `visibility: hidden`
+  // forever. Re-measure explicitly once the new layout has settled.
+  useEffect(() => {
+    if (layoutKey === undefined) return;
+    const ids = rootNodes(graph).map((n) => n.name);
+    const t = window.setTimeout(() => ids.forEach((id) => updateNodeInternals(id)), 220);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutKey]);
 
   useEffect(() => {
     onApi?.({
@@ -311,6 +328,7 @@ export function CrewCanvas(props: {
   onMoveNode?: (name: string, x: number, y: number) => void;
   onApi?: (api: CanvasApi) => void;
   onZoomChange?: (zoom: number) => void;
+  layoutKey?: number | string;
 }) {
   return (
     <ReactFlowProvider>

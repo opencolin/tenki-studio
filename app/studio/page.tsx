@@ -33,6 +33,7 @@ export default function StudioPage() {
   const [showWarnings, setShowWarnings] = useState(false);
   const [tool, setTool] = useState("select");
   const [inspecting, setInspecting] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(true);
   const [live, setLive] = useState<{ base: string; runId: string } | null>(null);
   const [beat, setBeat] = useState<number | null>(null);
   const api = useRef<CanvasApi | null>(null);
@@ -40,13 +41,26 @@ export default function StudioPage() {
   const artifactsRef = useRef<Artifact[]>([]);
 
   artifactsRef.current = artifacts;
-  const warnings = validate(crew);
+  const warnings = useMemo(() => validate(crew), [crew]);
 
   const clearTimers = () => {
     timers.current.forEach((t) => window.clearTimeout(t));
     timers.current = [];
   };
   useEffect(() => clearTimers, []);
+
+  useEffect(() => {
+    if (localStorage.getItem("tenki-chat") === "collapsed") setChatOpen(false);
+  }, []);
+
+  const onEditNode = useCallback((id: string) => setInspecting(id), []);
+
+  const toggleChat = () => {
+    setChatOpen((open) => {
+      localStorage.setItem("tenki-chat", open ? "collapsed" : "open");
+      return !open;
+    });
+  };
 
   // A live run replaces the simulator entirely: same views, real events.
   useEffect(() => {
@@ -141,14 +155,26 @@ export default function StudioPage() {
     setToast({ title: "Run stopped", body: "The sandbox was destroyed; the partial trace is kept." });
   };
 
-  const statuses: Record<string, TaskStatus> = {};
-  for (const t of crew.tasks) statuses[t.id] = "idle";
-  for (const e of run.events) {
-    if (e.type === "task_started" && e.taskId) statuses[e.taskId] = "running";
-    if (e.type === "task_completed" && e.taskId) statuses[e.taskId] = "done";
-  }
+  // Memoised: React Flow keys node identity off these props, and a new object
+  // on every render makes it drop each node's measured size — which renders
+  // the whole canvas invisible until something forces a re-measure.
+  const statuses = useMemo(() => {
+    const next: Record<string, TaskStatus> = {};
+    for (const t of crew.tasks) next[t.id] = "idle";
+    for (const e of run.events) {
+      if (e.type === "task_started" && e.taskId) next[e.taskId] = "running";
+      if (e.type === "task_completed" && e.taskId) next[e.taskId] = "done";
+    }
+    return next;
+  }, [crew.tasks, run.events]);
+
+  const warningNodeIds = useMemo(() => warnings.map((w) => w.nodeId), [warnings]);
 
   const busy = run.status === "running" || run.status === "provisioning";
+  // 340 panel + 12 gutter on each side; collapsed leaves room for the reopen tab.
+  const rightInset = chatOpen ? 364 : 64;
+  // Centre floating pills in the work area, which widens when the chat closes.
+  const workCentre = `calc((100% - ${rightInset}px) / 2)`;
   const canvasBg =
     view === "canvas"
       ? { background: "var(--canvas)" }
@@ -168,7 +194,10 @@ export default function StudioPage() {
       </div>
 
       {/* Actions */}
-      <div className="bar" style={{ top: 12, right: 364, height: 38, gap: 8, padding: "0 6px" }}>
+      <div
+        className="bar"
+        style={{ top: 12, right: rightInset, height: 38, gap: 8, padding: "0 6px", transition: "right 180ms ease" }}
+      >
         <span style={{ display: "inline-flex", paddingLeft: 4 }}>
           <span className="avatar" style={{ background: "var(--accent)" }}>
             CL
@@ -212,7 +241,15 @@ export default function StudioPage() {
           {/* Version + process */}
           <div
             className="bar"
-            style={{ top: 60, right: 364, width: 212, flexDirection: "column", alignItems: "stretch", padding: "10px 12px" }}
+            style={{
+              top: 60,
+              right: rightInset,
+              width: 212,
+              flexDirection: "column",
+              alignItems: "stretch",
+              padding: "10px 12px",
+              transition: "right 180ms ease",
+            }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11.5, color: "var(--muted)" }}>
               Version {version}
@@ -308,7 +345,7 @@ export default function StudioPage() {
 
           {/* Warnings */}
           {warnings.length > 0 && (
-            <div style={{ position: "absolute", bottom: 14, left: "calc(50% - 240px)", zIndex: 12 }}>
+            <div style={{ position: "absolute", bottom: 14, left: workCentre, transform: "translateX(-50%)", zIndex: 12 }}>
               {showWarnings && (
                 <div
                   className="card"
@@ -347,7 +384,10 @@ export default function StudioPage() {
           )}
 
           {/* History + zoom */}
-          <div className="bar" style={{ bottom: 14, right: 364, height: 36, padding: "0 4px", gap: 2 }}>
+          <div
+            className="bar"
+            style={{ bottom: 14, right: rightInset, height: 36, padding: "0 4px", gap: 2, transition: "right 180ms ease" }}
+          >
             <button className="ico" aria-label="Previous executions">
               <I.Clock size={15} />
             </button>
@@ -370,15 +410,16 @@ export default function StudioPage() {
             </button>
           </div>
 
-          <div style={{ position: "absolute", inset: 0, right: 364 }}>
+          <div style={{ position: "absolute", inset: 0, right: rightInset }}>
             <CrewCanvas
               graph={graph}
               statuses={statuses}
-              warnings={warnings.map((w) => w.nodeId)}
-              onEdit={setInspecting}
+              warnings={warningNodeIds}
+              onEdit={onEditNode}
               onMoveNode={(name, x, y) => setGraph((g) => setPosition(g, `/${name}`, x, y))}
               onApi={(a) => (api.current = a)}
               onZoomChange={setZoom}
+              layoutKey={rightInset}
             />
           </div>
         </>
@@ -396,14 +437,42 @@ export default function StudioPage() {
         />
       )}
 
-      {view === "output" && <OutputView spec={crew} run={run} artifacts={artifacts} />}
-      {view === "traces" && <TracesView spec={crew} run={run} />}
+      {view === "output" && <OutputView spec={crew} run={run} artifacts={artifacts} rightInset={rightInset} />}
+      {view === "traces" && <TracesView spec={crew} run={run} rightInset={rightInset} />}
 
-      <ChatPanel
-        onRun={() => setModal("inputs")}
-        suggestion={run.status === "completed"}
-        onSuggestion={() => setView("canvas")}
-      />
+      {chatOpen ? (
+        <ChatPanel
+          onRun={() => setModal("inputs")}
+          suggestion={run.status === "completed"}
+          onSuggestion={() => setView("canvas")}
+          onCollapse={toggleChat}
+        />
+      ) : (
+        <button
+          className="bar"
+          style={{ top: 12, right: 12, width: 40, height: 40, justifyContent: "center", zIndex: 20 }}
+          onClick={toggleChat}
+          aria-label="Open Studio Chat"
+          aria-expanded={false}
+          title="Open Studio Chat"
+        >
+          <I.Sparkle size={16} style={{ color: "var(--accent)" }} />
+          {run.status === "completed" && (
+            <span
+              style={{
+                position: "absolute",
+                top: 6,
+                right: 6,
+                width: 7,
+                height: 7,
+                borderRadius: 999,
+                background: "var(--accent)",
+              }}
+              aria-hidden="true"
+            />
+          )}
+        </button>
+      )}
 
       {modal === "env" && <EnvModal spec={crew} onClose={() => setModal(null)} />}
       {modal === "share" && <ShareModal onClose={() => setModal(null)} />}
@@ -446,7 +515,15 @@ export default function StudioPage() {
       {busy && view !== "output" && (
         <div
           className="bar"
-          style={{ bottom: 14, left: "calc(50% - 240px)", height: 32, padding: "0 13px", gap: 8, zIndex: 14 }}
+          style={{
+            bottom: 14,
+            left: workCentre,
+            transform: "translateX(-50%)",
+            height: 32,
+            padding: "0 13px",
+            gap: 8,
+            zIndex: 14,
+          }}
         >
           <span className="spinner" style={{ width: 11, height: 11, color: "var(--run)" }} />
           <span style={{ fontSize: 12, fontWeight: 600 }}>{fmt(run.elapsedMs)}</span>

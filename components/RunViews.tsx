@@ -8,18 +8,19 @@ import type { Artifact } from "@/lib/artifacts";
 import { ArtifactList } from "./Artifacts";
 import * as I from "./Icons";
 
-const surface: React.CSSProperties = {
+const surfaceAt = (right: number): React.CSSProperties => ({
   position: "absolute",
   top: 60,
   left: 12,
-  right: 364,
+  right,
   bottom: 12,
   background: "var(--surface)",
   border: "1px solid var(--line)",
   borderRadius: "var(--r-card)",
   boxShadow: "0 1px 2px rgba(19,36,48,.05)",
   overflow: "hidden",
-};
+  transition: "right 180ms ease",
+});
 
 /* ------------------------------- Output ------------------------------- */
 
@@ -27,11 +28,14 @@ export function OutputView({
   spec,
   run,
   artifacts,
+  rightInset = 364,
 }: {
   spec: CrewView;
   run: RunState;
   artifacts: Artifact[];
+  rightInset?: number;
 }) {
+  const surface = surfaceAt(rightInset);
   const seen = run.events;
   const done = new Set(seen.filter((e) => e.type === "task_completed").map((e) => e.taskId));
   const started = new Set(seen.filter((e) => e.type === "task_started").map((e) => e.taskId));
@@ -220,7 +224,16 @@ export function OutputView({
 
 /* ------------------------------- Traces ------------------------------- */
 
-export function TracesView({ spec, run }: { spec: CrewView; run: RunState }) {
+export function TracesView({
+  spec,
+  run,
+  rightInset = 364,
+}: {
+  spec: CrewView;
+  run: RunState;
+  rightInset?: number;
+}) {
+  const surface = surfaceAt(rightInset);
   const [selected, setSelected] = useState<number | null>(null);
   const [tab, setTab] = useState<"details" | "raw">("details");
 

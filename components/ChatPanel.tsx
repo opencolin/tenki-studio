@@ -85,10 +85,12 @@ export function ChatPanel({
   onRun,
   suggestion,
   onSuggestion,
+  onCollapse,
 }: {
   onRun: () => void;
   suggestion: boolean;
   onSuggestion: () => void;
+  onCollapse: () => void;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>(SEED);
   const [draft, setDraft] = useState("");
@@ -155,6 +157,15 @@ export function ChatPanel({
           onClick={() => setMessages(SEED)}
         >
           <I.Plus size={15} />
+        </button>
+        <button
+          className="ico"
+          style={{ width: 26, height: 26 }}
+          aria-label="Collapse Studio Chat"
+          title="Collapse chat"
+          onClick={onCollapse}
+        >
+          <I.ChevronRight size={15} />
         </button>
       </header>
 
