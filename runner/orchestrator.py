@@ -36,6 +36,30 @@ HOME = os.path.expanduser("~")
 RUNNER = os.environ.get("TENKI_RUNNER", f"{HOME}/tenki-studio/runner/tenki_runner.py")
 PYTHON = os.environ.get("TENKI_PYTHON", f"{HOME}/crewenv/bin/python")
 WORK = os.environ.get("TENKI_WORK", "/tmp/tenki-runs")
+ENV_FILE = os.environ.get("TENKI_ENV_FILE", f"{HOME}/.tenki-studio.env")
+
+
+def load_env_file(path=ENV_FILE):
+    """Read credentials from a dotenv file the operator drops in the sandbox.
+
+    Deliberately file-based: a key passed as a command-line argument is visible
+    to anyone who can run `ps`, and a key pasted into a chat or a commit is
+    worse. Nothing here is ever logged.
+    """
+    if not os.path.exists(path):
+        return []
+    loaded = []
+    with open(path) as fh:
+        for line in fh:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key, value = key.strip(), value.strip().strip("\"'")
+            if key:
+                os.environ[key] = value
+                loaded.append(key)
+    return loaded
 
 _runs: dict[str, list[dict]] = {}
 _cv = threading.Condition()
@@ -148,7 +172,9 @@ class Handler(BaseHTTPRequestHandler):
         after = int(parse_qs(url.query).get("after", ["0"])[0])
 
         if url.path == "/health":
-            return self._json(200, {"ok": True, **_stats, "runs": len(_runs)})
+            # Names only — never values.
+            creds = sorted(k for k in os.environ if k.endswith("_API_KEY"))
+            return self._json(200, {"ok": True, **_stats, "runs": len(_runs), "credentials": creds})
 
         if url.path == "/runs":
             with _cv:
@@ -221,6 +247,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    keys = load_env_file()
+    print(f"credentials loaded from {ENV_FILE}: {', '.join(keys) if keys else 'none'}", flush=True)
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    print(f"ingest listening on :{PORT}", flush=True)
+    print(f"orchestrator listening on :{PORT}", flush=True)
     server.serve_forever()
