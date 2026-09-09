@@ -37,6 +37,12 @@ export function OutputView({
   const started = new Set(seen.filter((e) => e.type === "task_started").map((e) => e.taskId));
   const [open, setOpen] = useState<string | null>(null);
 
+  // A failure the user cannot read is the same as a failure hidden: take the
+  // reason from the sandbox's own `run_failed` event, or from the client-side
+  // error if the run never reached the sandbox at all.
+  const failure =
+    seen.find((e) => e.type === "run_failed")?.detail?.error ?? run.error ?? null;
+
   if (run.status === "idle") {
     return (
       <div style={{ ...surface, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -59,8 +65,8 @@ export function OutputView({
             No runs yet
           </div>
           <p style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.55, marginTop: 6 }}>
-            Hit Run to start the crew. A fresh sandbox boots from this project&apos;s snapshot and the steps
-            appear here as they complete.
+            Hit Run to start the crew. It executes inside the Tenki sandbox and the steps appear here
+            as the real events arrive.
           </p>
         </div>
       </div>
@@ -96,14 +102,24 @@ export function OutputView({
           </div>
           <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 1 }}>
             {run.status === "provisioning"
-              ? "Creating sandbox from project snapshot…"
+              ? "Handing the crew to the sandbox…"
               : `${done.size} of ${total} steps complete · ${fmt(run.elapsedMs)}`}
+            {run.runId && (
+              <span className="mono" style={{ marginLeft: 8, fontSize: 11 }}>
+                {run.runId}
+              </span>
+            )}
           </div>
         </div>
         {run.status === "completed" ? (
           <span className="badge ok">
             <span className="dot" />
             Completed
+          </span>
+        ) : run.status === "failed" ? (
+          <span className="badge failed">
+            <I.Warning size={11} />
+            Failed
           </span>
         ) : run.status === "stopped" ? (
           <span className="badge idle">
@@ -134,11 +150,38 @@ export function OutputView({
             inset: "0 auto 0 0",
             width: `${pct}%`,
             borderRadius: 999,
-            background: run.status === "completed" ? "var(--ok)" : "var(--run)",
+            background:
+              run.status === "completed"
+                ? "var(--ok)"
+                : run.status === "failed"
+                  ? "var(--danger)"
+                  : "var(--run)",
             transition: "width 400ms ease",
           }}
         />
       </div>
+
+      {failure && (
+        <div
+          style={{
+            marginTop: 18,
+            border: "1px solid var(--danger-line)",
+            background: "var(--danger-soft)",
+            borderRadius: 10,
+            padding: "12px 14px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <I.Warning size={13} style={{ color: "var(--danger-ink)", flex: "none" }} />
+            <span className="sora" style={{ fontSize: 12.5, fontWeight: 600 }}>
+              The run failed in the sandbox
+            </span>
+          </div>
+          <div className="mono" style={{ fontSize: 11.5, lineHeight: 1.6, marginTop: 7, whiteSpace: "pre-wrap" }}>
+            {failure}
+          </div>
+        </div>
+      )}
 
       <div className="eyebrow" style={{ marginTop: 24 }}>
         Steps
@@ -255,7 +298,7 @@ export function TracesView({
           </div>
           <p style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.55, marginTop: 6 }}>
             Every LLM call and tool call the crew makes inside the sandbox lands here, with its inputs,
-            outputs and timings.
+            outputs and timings — as reported by the runner, not reconstructed.
           </p>
         </div>
       </div>
@@ -326,7 +369,7 @@ export function TracesView({
             <div className="dblock" style={{ maxHeight: "none" }}>
               {JSON.stringify(
                 {
-                  run_id: "run_7f2a",
+                  run_id: run.runId ?? null,
                   seq: event.seq,
                   ts: new Date((run.startedAt ?? 0) + event.at).toISOString(),
                   type: event.type,

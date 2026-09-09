@@ -31,10 +31,14 @@ export interface RunEvent {
     prompt?: string;
     input?: string;
     output?: string;
+    /** Present on `run_failed`: why the run stopped, straight from the sandbox. */
+    error?: string;
   };
 }
 
-export type RunStatus = "idle" | "provisioning" | "running" | "completed" | "stopped";
+/** `stopped` means the user detached; `failed` means the run itself died. The
+ *  two must stay distinct — a failure has a reason the user needs to read. */
+export type RunStatus = "idle" | "provisioning" | "running" | "completed" | "stopped" | "failed";
 
 export interface RunState {
   status: RunStatus;
@@ -42,6 +46,10 @@ export interface RunState {
   elapsedMs: number;
   events: RunEvent[];
   inputs: Record<string, string>;
+  /** The orchestrator's id for this run, once it has issued one. */
+  runId?: string | null;
+  /** Set when the run never got far enough to emit a `run_failed` event. */
+  error?: string | null;
 }
 
 export const fmt = (ms: number) => {

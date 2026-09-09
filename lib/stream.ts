@@ -46,6 +46,7 @@ function toRunEvent(wire: WireEvent, originMs: number): RunEvent {
       prompt: asText(payload.prompt),
       input: asText(payload.input),
       output: asText(payload.output),
+      error: asText(payload.error),
     },
   };
 }
@@ -63,6 +64,8 @@ export function subscribeToRun(
     onStatus: (status: RunState["status"]) => void;
     onHeartbeat?: () => void;
     onError?: (message: string) => void;
+    /** The run reached a terminal event: there is nothing more to stream. */
+    onDone?: (status: "completed" | "failed") => void;
   },
 ): StreamHandle {
   const url = `${base.replace(/\/$/, "")}/stream/${encodeURIComponent(runId)}?after=0`;
@@ -89,10 +92,15 @@ export function subscribeToRun(
 
     handlers.onEvent(toRunEvent(wire, origin));
 
-    if (wire.type === "provisioning") handlers.onStatus("provisioning");
-    else if (wire.type === "run_completed") handlers.onStatus("completed");
-    else if (wire.type === "run_failed") handlers.onStatus("stopped");
-    else handlers.onStatus("running");
+    if (wire.type === "provisioning") {
+      handlers.onStatus("provisioning");
+    } else if (wire.type === "run_completed" || wire.type === "run_failed") {
+      const status = wire.type === "run_completed" ? "completed" : "failed";
+      handlers.onStatus(status);
+      handlers.onDone?.(status);
+    } else {
+      handlers.onStatus("running");
+    }
   };
 
   source.addEventListener("end", () => {
@@ -149,4 +157,57 @@ export function liveRunFromLocation(): { base: string; runId: string } | null {
   const base = params.get("stream");
   const runId = params.get("run");
   return base && runId ? { base, runId } : null;
+}
+
+/** One finished or in-flight run, summarised from its own event log. */
+export interface RunSummary {
+  runId: string;
+  status: "running" | "completed" | "failed";
+  events: number;
+  startedAt: number | null;
+  durationMs: number | null;
+  inputs: Record<string, string>;
+}
+
+/**
+ * Every run the orchestrator knows about. There is no separate run database:
+ * the event log is the record, so a summary is derived from it rather than
+ * stored alongside it — which means this page cannot drift from what happened.
+ */
+export async function listRuns(base: string): Promise<RunSummary[]> {
+  const root = base.replace(/\/$/, "");
+  const index = await fetch(`${root}/runs`).then((r) => r.json());
+  const ids: string[] = Object.keys(index.runs ?? {});
+
+  const summaries = await Promise.all(
+    ids.map(async (runId): Promise<RunSummary | null> => {
+      try {
+        const body = await fetch(`${root}/events/${encodeURIComponent(runId)}?after=0`).then((r) =>
+          r.json(),
+        );
+        const events: WireEvent[] = body.events ?? [];
+        if (events.length === 0) return null;
+
+        const terminal = events.find((e) => e.type === "run_completed" || e.type === "run_failed");
+        const first = Date.parse(events[0].ts);
+        const last = Date.parse(events[events.length - 1].ts);
+        const started = events.find((e) => e.type === "run_started");
+
+        return {
+          runId,
+          status: !terminal ? "running" : terminal.type === "run_completed" ? "completed" : "failed",
+          events: events.length,
+          startedAt: Number.isNaN(first) ? null : first,
+          durationMs: Number.isNaN(first) || Number.isNaN(last) ? null : last - first,
+          inputs: (started?.payload?.inputs as Record<string, string>) ?? {},
+        };
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  return summaries
+    .filter((s): s is RunSummary => s !== null)
+    .sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0));
 }

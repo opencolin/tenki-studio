@@ -17,7 +17,7 @@ import { liveRunFromLocation, orchestratorBase, startRun, subscribeToRun } from 
 
 type View = "canvas" | "output" | "traces";
 
-const IDLE: RunState = { status: "idle", startedAt: null, elapsedMs: 0, events: [], inputs: {} };
+const IDLE: RunState = { status: "idle", startedAt: null, elapsedMs: 0, events: [], inputs: {}, runId: null, error: null };
 
 export default function StudioPage() {
   // The FBP graph is the source of truth; the crew view is derived from it.
@@ -68,6 +68,7 @@ export default function StudioPage() {
 
   const attach = useCallback((base: string, runId: string) => {
     liveHandle.current?.close();
+    setBeat(null);
     liveHandle.current = subscribeToRun(base, runId, {
       onEvent: (event: RunEvent) =>
         setRun((r) =>
@@ -82,6 +83,12 @@ export default function StudioPage() {
       onStatus: (status) => setRun((r) => (r.status === status ? r : { ...r, status })),
       onHeartbeat: () => setBeat(Date.now()),
       onError: (message) => setToast({ title: "Stream lost", body: message }),
+      // A terminal event means the run is over: stop calling it live, so the
+      // Run button comes back instead of a pill that streams nothing.
+      onDone: (status) => {
+        setLive(null);
+        if (status === "failed") setView("output");
+      },
     });
   }, []);
 
@@ -91,19 +98,27 @@ export default function StudioPage() {
   const beginRun = useCallback(
     async (inputs: Record<string, string>) => {
       const base = orchestratorBase();
-      setRun({ status: "provisioning", startedAt: Date.now(), elapsedMs: 0, events: [], inputs });
+      setRun({
+        status: "provisioning",
+        startedAt: Date.now(),
+        elapsedMs: 0,
+        events: [],
+        inputs,
+        runId: null,
+        error: null,
+      });
       setView("output");
       try {
         const runId = await startRun(base, compileCrew(crew), inputs);
+        setRun((r) => ({ ...r, runId }));
         setLive({ base, runId });
         setToast({ title: "Run started", body: `${runId} · executing in the sandbox.` });
         attach(base, runId);
       } catch (err) {
-        setRun((r) => ({ ...r, status: "stopped" }));
-        setToast({
-          title: "Could not start the run",
-          body: err instanceof Error ? err.message : "The orchestrator did not accept the crew.",
-        });
+        const message =
+          err instanceof Error ? err.message : "The orchestrator did not accept the crew.";
+        setRun((r) => ({ ...r, status: "failed", error: message }));
+        setToast({ title: "Could not start the run", body: message });
       }
     },
     [crew, attach],
@@ -121,6 +136,8 @@ export default function StudioPage() {
       elapsedMs: 0,
       events: [],
       inputs: { run_id: target.runId },
+      runId: target.runId,
+      error: null,
     });
     attach(target.base, target.runId);
     return () => liveHandle.current?.close();
@@ -188,7 +205,15 @@ export default function StudioPage() {
         <button className="ico sm" onClick={() => setModal("env")} aria-label="Environment variables">
           <I.Dots size={16} />
         </button>
-        <button className="btn" onClick={() => setToast({ title: "Deploy", body: "Version 9 pinned — the automation is online." })}>
+        <button
+          className="btn"
+          onClick={() =>
+            setToast({
+              title: "Deploy isn't built yet",
+              body: "Nothing was pinned or published. Use Run to execute this crew in the sandbox.",
+            })
+          }
+        >
           <I.Bolt size={13} />
           Deploy
         </button>
@@ -418,12 +443,7 @@ export default function StudioPage() {
       {view === "traces" && <TracesView spec={crew} run={run} rightInset={rightInset} />}
 
       {chatOpen ? (
-        <ChatPanel
-          onRun={() => setModal("inputs")}
-          suggestion={run.status === "completed"}
-          onSuggestion={() => setView("canvas")}
-          onCollapse={toggleChat}
-        />
+        <ChatPanel onRun={() => setModal("inputs")} onCollapse={toggleChat} />
       ) : (
         <button
           className="bar"
