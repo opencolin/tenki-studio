@@ -11,9 +11,9 @@ import * as I from "@/components/Icons";
 import { defaultGraph, toCrew, validate, type Process } from "@/lib/crew";
 import type { Graph } from "@/lib/fbp";
 import { setPosition, setProps } from "@fbp/spec";
-import { buildScript, fmt, type RunState } from "@/lib/run";
-import { buildArtifacts, releaseArtifacts, type Artifact } from "@/lib/artifacts";
-import { liveRunFromLocation, subscribeToRun } from "@/lib/stream";
+import { fmt, type RunEvent, type RunState } from "@/lib/run";
+import { compileCrew } from "@/lib/compile";
+import { liveRunFromLocation, orchestratorBase, startRun, subscribeToRun } from "@/lib/stream";
 
 type View = "canvas" | "output" | "traces";
 
@@ -28,7 +28,6 @@ export default function StudioPage() {
   const [run, setRun] = useState<RunState>(IDLE);
   const [modal, setModal] = useState<null | "env" | "share" | "inputs">(null);
   const [toast, setToast] = useState<{ title: string; body: string } | null>(null);
-  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [zoom, setZoom] = useState(1);
   const [showWarnings, setShowWarnings] = useState(false);
   const [tool, setTool] = useState("select");
@@ -38,9 +37,8 @@ export default function StudioPage() {
   const [beat, setBeat] = useState<number | null>(null);
   const api = useRef<CanvasApi | null>(null);
   const timers = useRef<number[]>([]);
-  const artifactsRef = useRef<Artifact[]>([]);
+  const liveHandle = useRef<{ close: () => void } | null>(null);
 
-  artifactsRef.current = artifacts;
   const warnings = useMemo(() => validate(crew), [crew]);
 
   const clearTimers = () => {
@@ -62,21 +60,16 @@ export default function StudioPage() {
     });
   };
 
-  // A live run replaces the simulator entirely: same views, real events.
   useEffect(() => {
-    const target = liveRunFromLocation();
-    if (!target) return;
-    setLive(target);
-    setView("output");
-    setRun({
-      status: "provisioning",
-      startedAt: Date.now(),
-      elapsedMs: 0,
-      events: [],
-      inputs: { run_id: target.runId },
-    });
-    const handle = subscribeToRun(target.base, target.runId, {
-      onEvent: (event) =>
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), 5200);
+    return () => window.clearTimeout(id);
+  }, [toast]);
+
+  const attach = useCallback((base: string, runId: string) => {
+    liveHandle.current?.close();
+    liveHandle.current = subscribeToRun(base, runId, {
+      onEvent: (event: RunEvent) =>
         setRun((r) =>
           r.events.some((e) => e.seq === event.seq)
             ? r
@@ -90,69 +83,53 @@ export default function StudioPage() {
       onHeartbeat: () => setBeat(Date.now()),
       onError: (message) => setToast({ title: "Stream lost", body: message }),
     });
-    return handle.close;
   }, []);
-  useEffect(() => () => releaseArtifacts(artifactsRef.current), []);
 
-  // Elapsed clock while a run is in flight.
-  useEffect(() => {
-    if (run.status !== "running" && run.status !== "provisioning") return;
-    if (live) return;
-    const id = window.setInterval(
-      () => setRun((r) => (r.startedAt ? { ...r, elapsedMs: Date.now() - r.startedAt } : r)),
-      250,
-    );
-    return () => window.clearInterval(id);
-  }, [run.status, live]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const id = window.setTimeout(() => setToast(null), 5200);
-    return () => window.clearTimeout(id);
-  }, [toast]);
-
-  const startRun = useCallback(
-    (inputs: Record<string, string>) => {
-      clearTimers();
-      releaseArtifacts(artifactsRef.current);
-      setArtifacts([]);
-      const script = buildScript(crew, inputs);
+  // Starting a run compiles the graph the user is looking at, hands it to the
+  // orchestrator, and attaches to the resulting event stream. Nothing is
+  // simulated: if the sandbox has no model credential the run fails and says so.
+  const beginRun = useCallback(
+    async (inputs: Record<string, string>) => {
+      const base = orchestratorBase();
       setRun({ status: "provisioning", startedAt: Date.now(), elapsedMs: 0, events: [], inputs });
       setView("output");
-      setToast({
-        title: "Execution started",
-        body: `Booting a sandbox for client_name = "${inputs.client_name}".`,
-      });
-      for (const ev of script) {
-        const t = window.setTimeout(() => {
-          setRun((r) => ({
-            ...r,
-            status: ev.type === "run_completed" ? "completed" : "running",
-            events: [...r.events, ev],
-          }));
-          if (ev.type === "run_completed") {
-            setToast({ title: "Run completed", body: "Sandbox destroyed · 21.4 sandbox-seconds billed." });
-            const outputOf = (id: string) =>
-              script.find((e) => e.type === "task_completed" && e.taskId === id)?.detail?.output;
-            buildArtifacts(inputs.client_name || "your client", {
-              brief: outputOf("client_discovery_and_briefing"),
-              design: outputOf("visual_design_specifications"),
-              prompt: outputOf("final_advertisement_prompt"),
-            })
-              .then(setArtifacts)
-              .catch(() => setArtifacts([]));
-          }
-        }, ev.at);
-        timers.current.push(t);
+      try {
+        const runId = await startRun(base, compileCrew(crew), inputs);
+        setLive({ base, runId });
+        setToast({ title: "Run started", body: `${runId} · executing in the sandbox.` });
+        attach(base, runId);
+      } catch (err) {
+        setRun((r) => ({ ...r, status: "stopped" }));
+        setToast({
+          title: "Could not start the run",
+          body: err instanceof Error ? err.message : "The orchestrator did not accept the crew.",
+        });
       }
     },
-    [crew],
+    [crew, attach],
   );
 
+  // Opened against an already-running run (?stream=&run=): just attach.
+  useEffect(() => {
+    const target = liveRunFromLocation();
+    if (!target) return;
+    setLive(target);
+    setView("output");
+    setRun({
+      status: "provisioning",
+      startedAt: Date.now(),
+      elapsedMs: 0,
+      events: [],
+      inputs: { run_id: target.runId },
+    });
+    attach(target.base, target.runId);
+    return () => liveHandle.current?.close();
+  }, [attach]);
+
   const stopRun = () => {
-    clearTimers();
+    liveHandle.current?.close();
     setRun((r) => ({ ...r, status: "stopped" }));
-    setToast({ title: "Run stopped", body: "The sandbox was destroyed; the partial trace is kept." });
+    setToast({ title: "Detached", body: "Stopped following this run; it continues in the sandbox." });
   };
 
   // Memoised: React Flow keys node identity off these props, and a new object
@@ -437,7 +414,7 @@ export default function StudioPage() {
         />
       )}
 
-      {view === "output" && <OutputView spec={crew} run={run} artifacts={artifacts} rightInset={rightInset} />}
+      {view === "output" && <OutputView spec={crew} run={run} rightInset={rightInset} />}
       {view === "traces" && <TracesView spec={crew} run={run} rightInset={rightInset} />}
 
       {chatOpen ? (
@@ -483,7 +460,7 @@ export default function StudioPage() {
           onCancel={() => setModal(null)}
           onRun={(inputs) => {
             setModal(null);
-            startRun(inputs);
+            void beginRun(inputs);
           }}
         />
       )}

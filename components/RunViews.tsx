@@ -4,8 +4,6 @@ import { useState } from "react";
 import type { CrewView } from "@/lib/crew";
 import { agentById } from "@/lib/crew";
 import { fmt, type RunEvent, type RunState } from "@/lib/run";
-import type { Artifact } from "@/lib/artifacts";
-import { ArtifactList } from "./Artifacts";
 import * as I from "./Icons";
 
 const surfaceAt = (right: number): React.CSSProperties => ({
@@ -27,12 +25,10 @@ const surfaceAt = (right: number): React.CSSProperties => ({
 export function OutputView({
   spec,
   run,
-  artifacts,
   rightInset = 364,
 }: {
   spec: CrewView;
   run: RunState;
-  artifacts: Artifact[];
   rightInset?: number;
 }) {
   const surface = surfaceAt(rightInset);
@@ -217,7 +213,6 @@ export function OutputView({
         })}
       </div>
 
-      <ArtifactList artifacts={artifacts} />
     </div>
   );
 }

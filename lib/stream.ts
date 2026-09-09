@@ -117,6 +117,31 @@ export function subscribeToRun(
   };
 }
 
+/**
+ * Ask the orchestrator to start a real run. Returns as soon as the runner is
+ * detached — the run's progress arrives on the event stream, not here.
+ */
+export async function startRun(
+  base: string,
+  crew: unknown,
+  inputs: Record<string, string>,
+): Promise<string> {
+  const res = await fetch(`${base.replace(/\/$/, "")}/runs`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ crew, inputs }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error ?? `orchestrator returned ${res.status}`);
+  return body.run_id as string;
+}
+
+/** Where the orchestrator lives. Same-origin through the proxy by default. */
+export function orchestratorBase(): string {
+  if (typeof window === "undefined") return "/_events";
+  return new URLSearchParams(window.location.search).get("stream") ?? "/_events";
+}
+
 /** Reads `?stream=` and `?run=` if the studio was opened against a live run. */
 export function liveRunFromLocation(): { base: string; runId: string } | null {
   if (typeof window === "undefined") return null;

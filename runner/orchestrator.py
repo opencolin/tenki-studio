@@ -11,6 +11,7 @@ it is one threaded stdlib server so the spike answers the transport question
 without dragging in infrastructure.
 
     GET  /health
+    POST /runs                        start a real run: {crew, inputs} -> {run_id}
     POST /ingest                      signed batch from the runner
     GET  /runs                        run ids and their event counts
     GET  /stream/<run_id>?after=N     SSE; replays >N then tails live
@@ -21,13 +22,20 @@ import hashlib
 import hmac
 import json
 import os
+import subprocess
+import sys
 import threading
 import time
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 SECRET = os.environ.get("TENKI_CALLBACK_SECRET", "spike-secret").encode()
 PORT = int(os.environ.get("PORT", "8090"))
+HOME = os.path.expanduser("~")
+RUNNER = os.environ.get("TENKI_RUNNER", f"{HOME}/tenki-studio/runner/tenki_runner.py")
+PYTHON = os.environ.get("TENKI_PYTHON", f"{HOME}/crewenv/bin/python")
+WORK = os.environ.get("TENKI_WORK", "/tmp/tenki-runs")
 
 _runs: dict[str, list[dict]] = {}
 _cv = threading.Condition()
@@ -78,7 +86,10 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        if urlparse(self.path).path != "/ingest":
+        path = urlparse(self.path).path
+        if path == "/runs":
+            return self._start_run()
+        if path != "/ingest":
             return self._json(404, {"error": "not found"})
         length = int(self.headers.get("content-length", "0"))
         raw = self.rfile.read(length)
@@ -93,6 +104,44 @@ class Handler(BaseHTTPRequestHandler):
         _stats["batches"] += 1
         added = _store(payload["run_id"], payload.get("events", []))
         self._json(200, {"ok": True, "added": added})
+
+    def _start_run(self):
+        """Start a real CrewAI run, detached, and return immediately.
+
+        Detaching is the Phase 0 finding: the caller must never hold the
+        connection open for the life of the run.
+        """
+        length = int(self.headers.get("content-length", "0"))
+        try:
+            body = json.loads(self.rfile.read(length))
+        except json.JSONDecodeError:
+            return self._json(400, {"error": "bad json"})
+
+        crew = body.get("crew")
+        if not crew or not crew.get("agents"):
+            return self._json(400, {"error": "no compiled crew supplied"})
+
+        run_id = "run_" + uuid.uuid4().hex[:10]
+        os.makedirs(WORK, exist_ok=True)
+        crew_path = os.path.join(WORK, f"{run_id}.crew.json")
+        with open(crew_path, "w") as fh:
+            json.dump(crew, fh)
+
+        if not os.path.exists(PYTHON):
+            return self._json(503, {"error": f"runner interpreter missing at {PYTHON}"})
+
+        log = open(os.path.join(WORK, f"{run_id}.jsonl"), "w")
+        subprocess.Popen(
+            [PYTHON, RUNNER,
+             "--crew", crew_path,
+             "--callback", f"http://localhost:{PORT}/ingest",
+             "--run-id", run_id,
+             "--inputs", json.dumps(body.get("inputs", {}))],
+            stdout=log, stderr=subprocess.STDOUT,
+            start_new_session=True, cwd=WORK, env=os.environ.copy(),
+        )
+        _store(run_id, [])  # register immediately so a stream can attach
+        return self._json(202, {"run_id": run_id})
 
     def do_GET(self):
         url = urlparse(self.path)
