@@ -13,6 +13,7 @@ export type EventType =
   | "tool_usage_started"
   | "tool_usage_finished"
   | "task_completed"
+  | "agent_completed"
   | "artifact"
   | "run_completed"
   | "run_failed"

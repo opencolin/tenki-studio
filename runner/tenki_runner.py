@@ -25,6 +25,37 @@ import urllib.error
 import urllib.request
 
 BATCH_MAX, BATCH_INTERVAL_S, HEARTBEAT_S, RETRIES = 50, 1.0, 5.0, 3
+MAX_TEXT = 8000
+
+
+def jsonable(value, depth=0):
+    """Coerce anything CrewAI hands us into something JSON can carry.
+
+    CrewAI's event payloads are rich objects — a task's `output` drags along
+    agent state, a `RuntimeState`, pydantic models. One of those in a batch
+    used to raise inside the emitter thread, which killed the thread, which
+    silently ended the event stream while the crew kept running: the run
+    looked dead in the UI even though it was working. Never let payload shape
+    take down delivery.
+    """
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    if isinstance(value, str):
+        return value[:MAX_TEXT]
+    if depth >= 4:
+        return str(value)[:MAX_TEXT]
+    if isinstance(value, dict):
+        return {str(k): jsonable(v, depth + 1) for k, v in list(value.items())[:50]}
+    if isinstance(value, (list, tuple, set)):
+        return [jsonable(v, depth + 1) for v in list(value)[:50]]
+    for attr in ("model_dump", "dict"):
+        fn = getattr(value, attr, None)
+        if callable(fn):
+            try:
+                return jsonable(fn(), depth + 1)
+            except Exception:
+                break
+    return str(value)[:MAX_TEXT]
 
 
 class Emitter:
@@ -38,35 +69,47 @@ class Emitter:
         threading.Thread(target=self._loop, daemon=True).start()
 
     def emit(self, type_, label, **fields):
+        # Coerce at the door, not at flush time: an event that cannot be
+        # serialized must never reach the buffer and poison the whole batch.
+        safe = {k: jsonable(v) for k, v in fields.items()}
         with self.lock:
             self.seq += 1
             event = {
                 "run_id": self.run_id,
                 "seq": self.seq,
-                "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                # Millisecond precision: a whole-second stamp collapses every
+                # duration the UI derives from these timestamps to zero.
+                "ts": time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())
+                      + f".{int(time.time() * 1000) % 1000:03d}Z",
                 "type": type_,
-                "label": label,
-                **fields,
+                "label": str(label)[:500],
+                **safe,
             }
             self.buf.append(event)
         # Second channel: if callbacks fail entirely the run is still recoverable.
-        print(json.dumps(event), flush=True)
+        print(json.dumps(event, default=str), flush=True)
 
     def _loop(self):
+        # This thread is the only thing delivering events. If it raises, the
+        # run goes dark while it is still working, so nothing here may escape.
         last = time.time()
         while not self.stopped.is_set():
             time.sleep(BATCH_INTERVAL_S)
-            if time.time() - last >= HEARTBEAT_S:
-                self.emit("heartbeat", "heartbeat")
-                last = time.time()
-            self.flush()
+            try:
+                if time.time() - last >= HEARTBEAT_S:
+                    self.emit("heartbeat", "heartbeat")
+                    last = time.time()
+                self.flush()
+            except Exception as exc:  # noqa: BLE001 - delivery outlives any single failure
+                print(f"emitter loop error: {type(exc).__name__}: {exc}",
+                      file=sys.stderr, flush=True)
 
     def flush(self):
         with self.lock:
             if not self.buf:
                 return
             batch, self.buf = self.buf[:BATCH_MAX], self.buf[BATCH_MAX:]
-        body = json.dumps({"run_id": self.run_id, "events": batch}).encode()
+        body = json.dumps({"run_id": self.run_id, "events": batch}, default=str).encode()
         sig = hmac.new(self.secret, body, hashlib.sha256).hexdigest()
         for attempt in range(RETRIES):
             try:
@@ -215,8 +258,10 @@ def run(spec, inputs, em):
 
     tasks = []
     for t in spec["tasks"]:
-        task = Task(description=t["description"], expected_output=t["expected_output"],
-                    agent=agents.get(t["agent"]))
+        # Name each Task with our own id: CrewAI echoes `task_name` on every
+        # event, which makes attribution exact instead of inferred.
+        task = Task(name=t["id"], description=t["description"],
+                    expected_output=t["expected_output"], agent=agents.get(t["agent"]))
         by_id[t["id"]] = task
         tasks.append(task)
     for t in spec["tasks"]:  # wire context once every Task exists
@@ -235,23 +280,61 @@ def run(spec, inputs, em):
     ]
     id_of = {id(v): k for k, v in agents.items()}
     task_id_of = {id(v): k for k, v in by_id.items()}
+    role_of = {}
+    for a in spec["agents"]:
+        role_of.setdefault(a["role"], a["id"])
+    agent_for_task = {t["id"]: t["agent"] for t in spec["tasks"]}
+
+    def which_agent(event, task_id=None):
+        """Our agent id for a CrewAI event, or None. Never a guess: object
+        identity first, then the role we ourselves set on the Agent, then the
+        crew's own task-to-agent assignment — CrewAI leaves `agent_role` empty
+        on task events, but the compiled crew already names the owner."""
+        for attr in ("agent", "from_agent"):
+            obj = getattr(event, attr, None)
+            if obj is not None and id(obj) in id_of:
+                return id_of[id(obj)]
+        by_role = role_of.get(getattr(event, "agent_role", None))
+        return by_role or agent_for_task.get(task_id)
+
+    def which_task(event):
+        """Our task id for a CrewAI event, or None."""
+        for attr in ("task", "from_task"):
+            obj = getattr(event, attr, None)
+            if obj is not None and id(obj) in task_id_of:
+                return task_id_of[id(obj)]
+        name = getattr(event, "task_name", None)
+        return name if name in by_id else None
+
+    # CrewAI inspects a handler's arity: a handler taking three or more
+    # positional parameters is called `(source, event, RuntimeState)`. Binding
+    # the event type as a default argument therefore made it a 3-arg handler
+    # and CrewAI overwrote that default with its RuntimeState — every event
+    # arrived mislabelled. Close over the values instead of defaulting them,
+    # and keep the handler exactly two arguments wide.
+    def make_handler(type_, label):
+        def handler(source, event):
+            payload = {}
+            for attr, key in (("output", "output"), ("input", "input"),
+                              ("tool_args", "input"), ("tool_name", "tool"),
+                              ("model", "model")):
+                val = getattr(event, attr, None)
+                if val is not None and key not in payload:
+                    payload[key] = str(val)[:MAX_TEXT]
+            task_id = which_task(event)
+            if type_ == "task_started" and task_id in by_id:
+                payload["description"] = by_id[task_id].description[:MAX_TEXT]
+            em.emit(type_, getattr(event, "tool_name", None) or label,
+                    agent_id=which_agent(event, task_id), task_id=task_id,
+                    payload=payload or None)
+
+        return handler
 
     for cls_name, type_, label in wiring:
         cls = getattr(ev, cls_name, None)
         if cls is None:
             continue
-
-        @bus.on(cls)
-        def _handler(source, event, _t=type_, _l=label):
-            payload = {}
-            for attr, key in (("output", "output"), ("input", "input"), ("tool_name", "tool")):
-                val = getattr(event, attr, None)
-                if val is not None:
-                    payload[key] = str(val)[:8000]
-            em.emit(_t, getattr(event, "tool_name", None) or _l,
-                    agent_id=id_of.get(id(getattr(event, "agent", None))),
-                    task_id=task_id_of.get(id(getattr(event, "task", None))),
-                    payload=payload or None)
+        bus.on(cls)(make_handler(type_, label))
 
     crew = Crew(agents=list(agents.values()), tasks=tasks,
                 process=Process.hierarchical if spec["process"] == "hierarchical" else Process.sequential,

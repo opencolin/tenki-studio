@@ -452,6 +452,12 @@ export function TracesView({
             const agent = agentById(spec, g.agentId);
             const task = spec.tasks.find((t) => t.id === g.taskId);
             const completed = g.events.find((e) => e.type === "task_completed");
+            const started = g.events.find((e) => e.type === "task_started");
+            // A task with a completion event is done, whether or not CrewAI
+            // reported a duration — the old check read "running" forever.
+            const took =
+              completed?.durationMs ??
+              (completed && started ? Math.max(0, completed.at - started.at) : null);
             return (
               <div key={`${g.taskId}-${gi}`}>
                 <div className="trow" style={{ background: "var(--page)", borderBottom: "1px solid var(--line)" }}>
@@ -461,7 +467,7 @@ export function TracesView({
                     {agent?.name}
                   </span>
                   <span style={{ color: "var(--muted)", fontSize: 11 }}>
-                    {completed?.durationMs ? fmt(completed.durationMs) : "running"} · 1 task
+                    {completed ? (took !== null ? fmt(took) : "completed") : "running"} · 1 task
                   </span>
                 </div>
                 <div className="trow" style={{ paddingLeft: 32 }}>

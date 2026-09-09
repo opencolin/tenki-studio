@@ -37,8 +37,11 @@ done
 echo "==> Built"
 
 echo "==> Starting the server on :$PORT"
+# `pkill -f serve.mjs` matches this very command line, so it kills the exec
+# shell before the restart runs and the deploy silently leaves nothing serving.
+# Walk /proc instead and skip ourselves.
 tenki sandbox exec --session "$SESSION" --timeout 60s -c \
-  "pkill -f serve.mjs || true; cd ~/tenki-studio && PORT=$PORT setsid node scripts/serve.mjs out >/tmp/serve.log 2>&1 < /dev/null & sleep 3; curl -sf -o /dev/null http://localhost:$PORT/ && echo serving"
+  "for p in /proc/[0-9]*; do pid=\${p#/proc/}; [ \"\$pid\" = \"\$\$\" ] && continue; tr '\\0' ' ' <\$p/cmdline 2>/dev/null | grep -q 'node scripts/serve.mjs' && kill -9 \$pid 2>/dev/null; done; cd ~/tenki-studio && PORT=$PORT setsid node scripts/serve.mjs out >/tmp/serve.log 2>&1 < /dev/null & sleep 3; curl -sf -o /dev/null http://localhost:$PORT/ && echo serving"
 
 echo "==> Exposing the port"
 tenki sandbox expose --session "$SESSION" "$PORT" --slug "$SLUG"
