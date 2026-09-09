@@ -154,9 +154,44 @@ def _python_tool(BaseTool, BaseModel, Field):
     return RunPython()
 
 
+def _event_api():
+    """Locate CrewAI's event bus and event classes.
+
+    Both moved between releases — `crewai.utilities.events` in 0.x,
+    `crewai.events` in 1.x — and the PRD flags this drift as a standing risk.
+    Try the known layouts and fail with something legible if none match.
+    """
+    import importlib
+
+    bus = None
+    for mod in ("crewai.events", "crewai.utilities.events", "crewai.events.event_bus"):
+        try:
+            bus = getattr(importlib.import_module(mod), "crewai_event_bus")
+            break
+        except (ImportError, AttributeError):
+            continue
+
+    types = None
+    for mod in ("crewai.events.event_types", "crewai.events", "crewai.utilities.events"):
+        try:
+            candidate = importlib.import_module(mod)
+        except ImportError:
+            continue
+        if any(hasattr(candidate, n) for n in ("TaskStartedEvent", "LLMCallStartedEvent")):
+            types = candidate
+            break
+
+    if bus is None or types is None:
+        raise RuntimeError(
+            "could not locate CrewAI's event bus or event types; "
+            "this CrewAI release moved them again")
+    return bus, types
+
+
 def run(spec, inputs, em):
     from crewai import Agent, Crew, Process, Task, LLM
-    from crewai.utilities.events import crewai_event_bus
+
+    bus, ev = _event_api()
 
     missing = [e for e in spec.get("required_env", []) if not os.environ.get(e)]
     model_env = {a["api_key_env"] for a in spec["agents"]}
@@ -189,9 +224,7 @@ def run(spec, inputs, em):
         if ctx:
             by_id[t["id"]].context = ctx
 
-    # Map CrewAI's event bus onto our wire schema. Names moved across releases,
-    # so import what exists and skip what does not rather than failing the run.
-    import crewai.utilities.events as ev
+    # Map CrewAI's event bus onto our wire schema.
     wiring = [
         ("TaskStartedEvent", "task_started", "Started"),
         ("TaskCompletedEvent", "task_completed", "Completed"),
@@ -208,7 +241,7 @@ def run(spec, inputs, em):
         if cls is None:
             continue
 
-        @crewai_event_bus.on(cls)
+        @bus.on(cls)
         def _handler(source, event, _t=type_, _l=label):
             payload = {}
             for attr, key in (("output", "output"), ("input", "input"), ("tool_name", "tool")):
