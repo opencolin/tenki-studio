@@ -24,6 +24,23 @@ looked completely dead while one hand-typed path happened to work.
 The regex capture form matches the root, trailing slashes and nested paths.
 Don't "tidy" it back to the named-parameter form.
 
+## A project route also sends /_events to the sandbox
+
+Project-level routes are evaluated before a deployment's own rewrites, and this
+project has one:
+
+    ^/_events/(.*)$  ->  https://tenki-studio--03q08p.us.sb.tenki.sh/_events/$1
+
+It exists because the stale second rewrite could not be removed when it broke:
+Vercel was mid-incident with deployments stuck in `Initializing`, so no new
+config could land. A project route is applied without a build, which made it
+the only way to override a bad rewrite while the platform was down. Keep it —
+it now points at the same host as the catch-all, so it costs nothing, and it is
+the lever to reach for the next time a deployment cannot be made.
+
+Read or change it with the Vercel API (`/v1/projects/<id>/routes`); staged
+versions must be promoted before they take effect.
+
 ## Deployed as
 
 Vercel project `tenki-monster` (team `dablclub`, `prj_MGOepCKQliXtY4B6XySTTPzMPO0Q`).
