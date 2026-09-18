@@ -2,10 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/_events/(.*)",
-      "destination": "https://tenki-events--03q08p.us.sb.tenki.sh/$1"
-    },
-    {
       "source": "/(.*)",
       "destination": "https://tenki-studio--03q08p.us.sb.tenki.sh/$1"
     }
