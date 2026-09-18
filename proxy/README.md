@@ -24,22 +24,21 @@ looked completely dead while one hand-typed path happened to work.
 The regex capture form matches the root, trailing slashes and nested paths.
 Don't "tidy" it back to the named-parameter form.
 
-## A project route also sends /_events to the sandbox
+## When a deployment cannot be made
 
-Project-level routes are evaluated before a deployment's own rewrites, and this
-project has one:
+Project-level routes are evaluated *before* a deployment's own rewrites and are
+applied with no build, so they can override a bad rewrite when the build
+pipeline is unavailable. That is not theoretical: a stale `/_events` rewrite
+had to be overridden during a Vercel incident that left every deployment stuck
+in `Initializing`, and a project route was the only thing that could land.
 
-    ^/_events/(.*)$  ->  https://tenki-studio--03q08p.us.sb.tenki.sh/_events/$1
+    POST /v1/projects/<id>/routes        stage a version
+    PATCH /v1/projects/<id>/routes/versions   promote it
 
-It exists because the stale second rewrite could not be removed when it broke:
-Vercel was mid-incident with deployments stuck in `Initializing`, so no new
-config could land. A project route is applied without a build, which made it
-the only way to override a bad rewrite while the platform was down. Keep it —
-it now points at the same host as the catch-all, so it costs nothing, and it is
-the lever to reach for the next time a deployment cannot be made.
-
-Read or change it with the Vercel API (`/v1/projects/<id>/routes`); staged
-versions must be promoted before they take effect.
+The project has **no** routes configured now — the single rewrite below covers
+everything, so a redundant rule would only be a puzzle for the next reader.
+`GET /v1/projects/<id>/routes` should come back empty; if it does not, someone
+added an override and it takes precedence over `vercel.json`.
 
 ## Deployed as
 
