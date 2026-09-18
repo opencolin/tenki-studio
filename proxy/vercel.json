@@ -3,11 +3,11 @@
   "rewrites": [
     {
       "source": "/_events/(.*)",
-      "destination": "https://tenki-events--irtbn5.us.sb.tenki.sh/$1"
+      "destination": "https://tenki-events--03q08p.us.sb.tenki.sh/$1"
     },
     {
       "source": "/(.*)",
-      "destination": "https://tenki-studio--irtbn5.us.sb.tenki.sh/$1"
+      "destination": "https://tenki-studio--03q08p.us.sb.tenki.sh/$1"
     }
   ]
 }

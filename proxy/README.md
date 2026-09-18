@@ -3,8 +3,8 @@
 A rewrite-only Vercel project — no build, no code, no runtime. `vercel.json`
 forwards every path to the Tenki sandbox that serves Tenki Studio.
 
-    tenki.monster/*          ->  tenki-studio--irtbn5.us.sb.tenki.sh/*
-    tenki.monster/_events/*  ->  tenki-events--irtbn5.us.sb.tenki.sh/*
+    tenki.monster/*          ->  tenki-studio--03q08p.us.sb.tenki.sh/*
+    tenki.monster/_events/*  ->  tenki-events--03q08p.us.sb.tenki.sh/*
 
 The second rule exists so a live run can be streamed same-origin:
 
@@ -34,6 +34,11 @@ arrangement we want — don't disable it.
 The preview hostnames are stable while the sandbox is sticky and its slug is
 unchanged. If the sandbox is recreated or re-slugged, update the two
 `destination` values and redeploy; nothing else moves.
+
+The suffix after `--` is the workspace, and it is **not** as stable as the slug:
+it moved from `irtbn5` to `03q08p` on its own, which 404'd the whole domain
+while both sandboxes were healthy. `tenki sandbox preview-url list` prints the
+current hostnames — check them there before assuming the sandbox is down.
 
 ## Caveat
 

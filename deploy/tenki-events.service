@@ -1,0 +1,29 @@
+# The run orchestrator: event ingest, the SSE stream, and POST /runs.
+#
+# stdlib-only, so it runs on the sandbox's system python. TENKI_PYTHON points at
+# the venv that actually holds CrewAI — if that venv is missing, POST /runs
+# answers 503 with the reason instead of pretending a run started.
+#
+# Install: sudo cp deploy/tenki-events.service /etc/systemd/system/
+#          sudo systemctl enable --now tenki-events
+[Unit]
+Description=Tenki Studio run orchestrator (event ingest + run start)
+After=network.target
+
+[Service]
+Type=simple
+User=tenki
+Group=tenki
+WorkingDirectory=/home/tenki/tenki-studio
+Environment=PORT=8090
+Environment=TENKI_CALLBACK_SECRET=spike-secret
+Environment=TENKI_PYTHON=/home/tenki/crewenv/bin/python
+ExecStart=/usr/bin/python3 runner/orchestrator.py
+Restart=always
+RestartSec=2
+TimeoutStopSec=5s
+StandardOutput=append:/home/tenki/tenki-events.log
+StandardError=append:/home/tenki/tenki-events.log
+
+[Install]
+WantedBy=multi-user.target

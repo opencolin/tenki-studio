@@ -1,0 +1,25 @@
+# The exported static site. A paused sandbox restores this process with a dead
+# socket — it still shows up in `ps` and still listens, but nothing reaches it.
+# `systemctl restart tenki-studio` is what makes that recoverable.
+#
+# Install: sudo cp deploy/tenki-studio.service /etc/systemd/system/
+#          sudo systemctl enable --now tenki-studio
+[Unit]
+Description=Tenki Studio static site
+After=network.target
+
+[Service]
+Type=simple
+User=tenki
+Group=tenki
+WorkingDirectory=/home/tenki/tenki-studio
+Environment=PORT=8080
+ExecStart=/usr/local/bin/node scripts/serve.mjs out
+Restart=always
+RestartSec=2
+TimeoutStopSec=5s
+StandardOutput=append:/home/tenki/tenki-studio.log
+StandardError=append:/home/tenki/tenki-studio.log
+
+[Install]
+WantedBy=multi-user.target
