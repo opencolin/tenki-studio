@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 # Bring the live site back up after the hosting sandbox stops serving.
 #
-# Two different failures look identical from outside — every request returns
+# Several different failures look identical from outside — every request returns
 #
 #   {"code":"route_not_found","message":"no preview route registered for this host"}
 #
-#   1. The sandbox was PAUSED or reaped. `tenki sandbox list` shows the state.
-#   2. The sandbox is fine but its preview hostname moved. The part after `--`
+#   1. The workspace balance ran out. The sandbox auto-pauses even though it is
+#      sticky, and it cannot resume until the account is topped up. This has
+#      been the cause every time the site went down on its own.
+#   2. The sandbox was PAUSED or reaped for another reason. `tenki sandbox list`.
+#   3. The sandbox is fine but its preview hostname moved. The part after `--`
 #      is the workspace id, and it is NOT stable: it changed from `irtbn5` to
-#      `03q08p` on its own while both sandboxes were healthy, which 404'd the
-#      whole domain. `tenki sandbox preview-url list` prints the real hostnames.
+#      `03q08p` on its own while the sandbox was healthy, which 404'd the whole
+#      domain. `tenki sandbox preview-url list` prints the real hostname.
 #
-# This script fixes 1 and detects 2. For 2 the fix is in proxy/: update the two
-# destinations in vercel.json and redeploy, since only the proxy knows the host.
+# This script fixes 2, detects 3, and says so plainly when it hits 1 — which
+# only a top-up can fix. For 3 the fix is in proxy/: update the destination in
+# vercel.json and redeploy, since only the proxy knows the host.
 #
 # Usage: ./scripts/restore-sandbox.sh
 set -euo pipefail
@@ -28,11 +32,49 @@ sbx() { tenki sandbox exec --session "$SESSION" --timeout "${2:-60s}" -c "$1"; }
 
 say "Ensuring the sandbox is running"
 if tenki sandbox get --session "$SESSION" >/dev/null 2>&1; then
+  # `resume` returns long before the session can take commands, and a resume
+  # already in flight makes a second one fail outright — so ignore the result
+  # and wait on the state instead. Without this the very next exec dies with
+  # "http2: client connection lost", which reads like a network fault rather
+  # than "not up yet".
   tenki sandbox resume --session "$SESSION" >/dev/null 2>&1 || true
 else
   tenki sandbox create --name "$SESSION" --sticky --allow-inbound \
     --cpu 2 --memory-mb 2048 --idle-timeout 0 >/dev/null
 fi
+
+printf '    waiting for the session'
+for _ in $(seq 1 90); do
+  tenki sandbox get --session "$SESSION" 2>/dev/null | grep -qE '^state *: RUNNING' && break
+  printf '.'; sleep 5
+done
+# RUNNING is necessary but not sufficient: exec can still be refused for a few
+# seconds after the state flips.
+for _ in $(seq 1 30); do
+  sbx 'echo ready' 30s 2>/dev/null | grep -q ready && break
+  printf '.'; sleep 5
+done
+if ! sbx 'echo ready' 30s 2>/dev/null | grep -q ready; then
+  echo " never came up"
+  err="$(tenki sandbox get --session "$SESSION" --output json 2>/dev/null \
+    | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("session",d).get("last_resume_error","-"))' 2>/dev/null)"
+  cat <<EOF
+
+  last_resume_error: ${err:-unknown}
+
+  The usual cause is an empty workspace balance. Tenki does not say so on
+  resume — the session cycles RESUMING -> timeout, and a second resume fails
+  with "session belongs to a different resume operation". Only 'create'
+  names it:
+
+      failed_precondition: workspace balance is empty; top up to start a sandbox
+
+  Top up the Tenki workspace, then rerun this script. Nothing else needs to
+  change: the disk, the route and the proxy all survive a pause.
+EOF
+  exit 1
+fi
+echo " up"
 
 # A paused sandbox restores its processes with dead sockets: they look alive in
 # `ps` and listen on the right port, but nothing reaches them. systemd units are
@@ -46,10 +88,13 @@ if ! sbx 'test -d ~/tenki-studio/out && echo has-build' 2>/dev/null | grep -q ha
 fi
 
 say "Installing the orchestrator"
-sbx 'mkdir -p ~/tenki-studio/runner /tmp/tenki-runs' >/dev/null
-for f in orchestrator.py tenki_runner.py stub_llm.py; do
-  tenki sandbox write --session "$SESSION" --path "tenki-studio/runner/$f" \
-    --data-file "$ROOT/runner/$f" >/dev/null
+sbx 'mkdir -p ~/tenki-studio/runner ~/tenki-studio/deploy ~/tenki-studio/scripts /tmp/tenki-runs' >/dev/null
+# Written from this checkout, not the clone, so a restore always runs the code
+# you are looking at — including serve.mjs, which carries the /_events proxy.
+for f in runner/orchestrator.py runner/tenki_runner.py runner/stub_llm.py \
+         scripts/serve.mjs deploy/tenki-studio.service deploy/tenki-events.service; do
+  tenki sandbox write --session "$SESSION" --path "tenki-studio/$f" \
+    --data-file "$ROOT/$f" >/dev/null
 done
 
 # CrewAI itself, in its own venv. Only the runner needs it; the orchestrator is
@@ -64,7 +109,7 @@ fi
 say "Starting both services under systemd"
 # Never `pkill -f <pattern>` here: the pattern matches this exec shell's own
 # command line and kills it before the restart runs, leaving nothing serving.
-sbx "sudo cp ~/tenki-studio/deploy/tenki-events.service /etc/systemd/system/ 2>/dev/null || true
+sbx "sudo cp ~/tenki-studio/deploy/tenki-studio.service ~/tenki-studio/deploy/tenki-events.service /etc/systemd/system/
      sudo systemctl daemon-reload
      sudo systemctl enable --now tenki-studio tenki-events 2>&1 | tail -1
      sudo systemctl restart tenki-studio tenki-events
@@ -72,18 +117,20 @@ sbx "sudo cp ~/tenki-studio/deploy/tenki-events.service /etc/systemd/system/ 2>/
      curl -s -o /dev/null -w 'site:%{http_code} ' http://localhost:$SITE_PORT/studio/
      curl -s -o /dev/null -w 'events:%{http_code}\n' http://localhost:$EVENTS_PORT/health"
 
-say "Exposing both ports"
+# One port, one route. The orchestrator on :8090 is reached through the site
+# server's /_events proxy, so it needs no route of its own — a second route is
+# what broke twice before.
+say "Exposing the site"
 tenki sandbox expose --session "$SESSION" "$SITE_PORT" --slug tenki-studio >/dev/null
-tenki sandbox expose --session "$SESSION" "$EVENTS_PORT" --slug tenki-events >/dev/null
-tenki sandbox preview-url list | grep -E "SLUG|tenki-studio|tenki-events" || true
+tenki sandbox preview-url list | grep -E "SLUG|tenki-studio" || true
 
 say "Checking the proxy still points where the sandbox actually lives"
 live_site="$(tenki sandbox preview-url list | awk '$4 == "tenki-studio" {print $10}' | head -1)"
 if [ -n "$live_site" ] && ! grep -q "${live_site#https://}" "$ROOT/proxy/vercel.json"; then
   printf '  MISMATCH: proxy/vercel.json does not name %s\n' "$live_site"
-  printf '  Update both destinations there, then: cd proxy && vercel deploy --prod\n'
+  printf '  Update the destination there, then: cd proxy && vercel deploy --prod\n'
 else
-  printf '  proxy destinations match\n'
+  printf '  proxy destination matches\n'
 fi
 
 say "Verifying through the domain"
