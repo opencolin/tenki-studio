@@ -192,7 +192,7 @@ export const madMenGraph: Graph = {
       goal: "Manage client relationships for {client_name} and run a thorough discovery.",
       backstory:
         "You are the account man. You get the client talking, and you come back with the brief nobody else could get.",
-      model: "claude-sonnet-5",
+      model: "aisa/qwen3.8-max",
       tools: ["serper_search"],
     }),
     agent("don_draper", 342, 0, {
@@ -201,7 +201,7 @@ export const madMenGraph: Graph = {
       goal: "Develop the strategic creative framework for the {client_name} campaign.",
       backstory:
         "You find the one true thing about a product and say it in a way nobody forgets. You are never precious about a draft.",
-      model: "gpt-4o",
+      model: "aisa/qwen3.8-max",
       tools: ["serper_search"],
     }),
     agent("sal_romano", 644, 0, {
@@ -210,7 +210,7 @@ export const madMenGraph: Graph = {
       goal: "Design visually stunning and strategically effective creative for {client_name}.",
       backstory:
         "You think in layouts. You know how a 1960s magazine spread breathes, and you can specify it precisely.",
-      model: "claude-sonnet-5",
+      model: "aisa/qwen3.8-max",
       tools: ["serper_search"],
     }),
     agent("peggy_olson", 272, 470, {
@@ -219,7 +219,7 @@ export const madMenGraph: Graph = {
       goal: "Craft compelling, persuasive copy for {client_name} campaigns.",
       backstory:
         "You started in the typing pool and you write better headlines than anyone on the floor. You fight for the good line.",
-      model: "claude-sonnet-5",
+      model: "aisa/qwen3.8-max",
       tools: [],
     }),
 

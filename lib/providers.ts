@@ -63,9 +63,24 @@ export const PROVIDERS: Provider[] = [
     name: "AIsa",
     vendor: "AIsa",
     env: "AISA_API_KEY",
-    baseUrl: "https://aisa.one/v1",
-    note: "OpenAI-compatible · 110+ models behind one credential",
-    models: ["aisa/openai/gpt-4o", "aisa/anthropic/claude-sonnet-5", "aisa/google/gemini-3-pro"],
+    // api.aisa.one, not aisa.one — the bare host serves the marketing site and
+    // answers /v1/* with an HTML 404, which surfaces as an unintelligible
+    // parse error rather than a 404 from the SDK.
+    baseUrl: "https://api.aisa.one/v1",
+    note: "OpenAI-compatible · 108 models behind one credential",
+    // AIsa takes its own flat ids — not `vendor/model`. The single `aisa/`
+    // prefix here is ours: the compiler strips it and passes the rest through
+    // untouched, so what reaches AIsa is exactly the id from their catalog.
+    // Their docs say not to invent ids, so every one of these is copied from
+    // https://aisa.one/docs/guides/models.
+    models: [
+      "aisa/qwen3.8-max",
+      "aisa/qwen3.7-max",
+      "aisa/qwen3-max",
+      "aisa/qwen3.7-flash",
+      "aisa/qwen3-coder-plus",
+      "aisa/qwen-flash",
+    ],
   },
 ];
 
