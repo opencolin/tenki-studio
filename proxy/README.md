@@ -3,7 +3,7 @@
 A rewrite-only Vercel project — no build, no code, no runtime. `vercel.json`
 forwards every path to the Tenki sandbox that serves Tenki Studio.
 
-    tenki.monster/*  ->  tenki-studio--03q08p.us.sb.tenki.sh/*
+    tenki.monster/*  ->  tenki-studio--swc27h.us.sb.tenki.sh/*
 
 One rule, deliberately. There used to be a second rule sending `/_events/*` to
 its own `tenki-events` preview route, and it broke twice: once when the route
@@ -55,7 +55,7 @@ unchanged. If the sandbox is recreated or re-slugged, update the one
 `destination` value and redeploy; nothing else moves.
 
 The suffix after `--` is the workspace, and it is **not** as stable as the slug:
-it moved from `irtbn5` to `03q08p` on its own, which 404'd the domain while the
+it moved from `irtbn5` to `swc27h` on its own, which 404'd the domain while the
 sandbox was healthy. `tenki sandbox preview-url list` prints the current
 hostname — check it there before assuming the sandbox is down.
 

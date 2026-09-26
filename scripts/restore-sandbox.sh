@@ -39,42 +39,48 @@ if tenki sandbox get --session "$SESSION" >/dev/null 2>&1; then
   # than "not up yet".
   tenki sandbox resume --session "$SESSION" >/dev/null 2>&1 || true
 else
+  # --sticky is the whole story now: `--idle-timeout` was removed from the CLI
+  # and sandboxes no longer auto-pause on idle. Passing it fails the create.
   tenki sandbox create --name "$SESSION" --sticky --allow-inbound \
-    --cpu 2 --memory-mb 2048 --idle-timeout 0 >/dev/null
+    --cpu 2 --memory-mb 2048 --disk-size-gb 10 >/dev/null
 fi
 
+# RUNNING is necessary but not sufficient: exec is refused for a while after
+# the state flips, so a working exec is the only honest readiness signal.
+# Ten minutes — a cold resume from a pause snapshot is genuinely slow.
 printf '    waiting for the session'
-for _ in $(seq 1 90); do
-  tenki sandbox get --session "$SESSION" 2>/dev/null | grep -qE '^state *: RUNNING' && break
+ready=no
+for _ in $(seq 1 120); do
+  if sbx 'echo ready' 30s 2>/dev/null | grep -q ready; then ready=yes; break; fi
   printf '.'; sleep 5
 done
-# RUNNING is necessary but not sufficient: exec can still be refused for a few
-# seconds after the state flips.
-for _ in $(seq 1 30); do
-  sbx 'echo ready' 30s 2>/dev/null | grep -q ready && break
-  printf '.'; sleep 5
-done
-if ! sbx 'echo ready' 30s 2>/dev/null | grep -q ready; then
-  echo " never came up"
-  err="$(tenki sandbox get --session "$SESSION" --output json 2>/dev/null \
-    | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("session",d).get("last_resume_error","-"))' 2>/dev/null)"
-  cat <<EOF
 
-  last_resume_error: ${err:-unknown}
+if [ "$ready" = yes ]; then
+  echo " up"
+else
+  state="$(tenki sandbox get --session "$SESSION" 2>/dev/null | awk '/^state/{print $3}')"
+  echo " never came up (state=${state:-unknown})"
+  # Only blame the balance when the session genuinely will not start. Saying
+  # "top up" at a session that is RUNNING sends you off fixing the wrong thing,
+  # which is exactly the sin this message exists to prevent.
+  if [ "$state" != "RUNNING" ]; then
+    cat <<EOF
 
-  The usual cause is an empty workspace balance. Tenki does not say so on
-  resume — the session cycles RESUMING -> timeout, and a second resume fails
-  with "session belongs to a different resume operation". Only 'create'
-  names it:
+  A session stuck outside RUNNING is usually an empty workspace balance.
+  Tenki does not say so on resume — it cycles RESUMING -> timeout, and a
+  second resume fails with "session belongs to a different resume
+  operation". Only 'create' names it:
 
       failed_precondition: workspace balance is empty; top up to start a sandbox
 
-  Top up the Tenki workspace, then rerun this script. Nothing else needs to
-  change: the disk, the route and the proxy all survive a pause.
+  Top up the Tenki workspace, then rerun this script.
 EOF
+  else
+    echo "  The session is RUNNING but not accepting commands. Rerun; if that"
+    echo "  persists, terminate it and let this script build a fresh one."
+  fi
   exit 1
 fi
-echo " up"
 
 # A paused sandbox restores its processes with dead sockets: they look alive in
 # `ps` and listen on the right port, but nothing reaches them. systemd units are
